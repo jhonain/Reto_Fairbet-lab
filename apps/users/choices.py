@@ -1,19 +1,20 @@
 from django.db import models
 
-class KYCStatus(models.TextChoices):
-    PENDING     = "pendiente_verificacion", "Pendiente de verificación"
-    VERIFIED    = "verificado",             "Verificado"
-    BLOCKED     = "bloqueado",              "Bloqueado"
-    EXCLUDED    = "autoexcluido",           "Autoexcluido"
 
-class ExclusionType(models.TextChoices):
-    DAYS_7      = "temporal_7",    "Temporal 7 días"
-    DAYS_30     = "temporal_30",   "Temporal 30 días"
-    DAYS_90     = "temporal_90",   "Temporal 90 días"
-    INDEFINITE  = "indefinida",    "Indefinida"
+class EstadoKYC(models.TextChoices):
+    PENDIENTE = "pendiente", "Pendiente de verificación"
+    VERIFICADO = "verificado", "Verificado"
+    BLOQUEADO = "bloqueado", "Bloqueado"
 
 
-class LimitPeriod(models.TextChoices):
-    DAILY   = "daily",   "Diario"
-    WEEKLY  = "weekly",  "Semanal"
-    MONTHLY = "monthly", "Mensual"
+class TipoExclusion(models.TextChoices):
+    TEMPORAL_7 = "temporal_7", "Temporal (7 días)"
+    TEMPORAL_30 = "temporal_30", "Temporal (30 días)"
+    TEMPORAL_90 = "temporal_90", "Temporal (90 días)"
+    INDEFINIDA = "indefinida", "Indefinida"
+
+
+class PeriodoLimite(models.TextChoices):
+    DIARIO = "diario", "Diario"
+    SEMANAL = "semanal", "Semanal"
+    MENSUAL = "mensual", "Mensual"

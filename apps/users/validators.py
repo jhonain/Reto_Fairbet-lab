@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from datetime import date
 
 
-def validate_dni(dni: str):
+def validar_dni(dni: str):
     """Algoritmo de dígito verificador DNI peruano (RENIEC)."""
     if not dni.isdigit() or len(dni) != 8:
         raise ValidationError("DNI debe tener 8 dígitos numéricos.")
@@ -14,7 +14,7 @@ def validate_dni(dni: str):
         raise ValidationError("DNI inválido: dígito verificador incorrecto.")
 
 
-def validate_age(birth_date: date):
+def validar_edad(birth_date: date):
     """Validar que el usuario tenga al menos 18 años."""
     today = date.today()
     age = today.year - birth_date.year - (
