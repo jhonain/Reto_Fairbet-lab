@@ -1,8 +1,8 @@
 # Declaración de Uso de Herramientas de IA
 
-**Integrante:** [Tu Nombre Completo]  
+**Integrante:** Reynaldo Jhonain 
 **Fecha de inicio del proyecto:** 2026-05-24  
-**Última actualización:** [Actualizar al final de cada sprint]
+**Última actualización:** 2026-05-25
 
 ---
 
@@ -10,8 +10,7 @@
 
 He utilizado herramientas de IA generativa (ChatGPT, Claude, Kimi, GitHub Copilot)
 como **apoyo al aprendizaje y productividad**, nunca como sustituto de mi 
-comprensión. Puedo explicar y modificar línea por línea todo el código que 
-entrego, incluyendo el que recibió asistencia de IA.
+comprensión. 
 
 ---
 
