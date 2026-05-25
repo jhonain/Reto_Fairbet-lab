@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     'apps.betting',
     'apps.events',
     'apps.wallet',
+    'apps.dashboard',
+    'apps.realtime',
+    'apps.responsible_gaming',
 ]
 
 MIDDLEWARE = [

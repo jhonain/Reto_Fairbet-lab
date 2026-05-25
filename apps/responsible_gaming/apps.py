@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class ResponsibleGamingConfig(AppConfig):
-    name = 'responsible_gaming'
+    name = 'apps.responsible_gaming'
