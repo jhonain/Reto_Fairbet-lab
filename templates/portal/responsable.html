@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Juego responsable — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Juego responsable</h1>
+
+<section class="tarjeta">
+    <h2>Límites de recarga</h2>
+    <p>Bajar el límite es inmediato. Subirlo espera 24 horas.</p>
+    <table class="tabla">
+        <tr><th>Período</th><th>Límite</th><th>Usado</th></tr>
+        {% for item in limites %}
+        <tr>
+            <td>{{ item.obj.get_periodo_display }}</td>
+            <td>{{ item.obj.monto }} FIC</td>
+            <td>{{ item.usado }} FIC</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <form method="post" class="formulario">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="limite">
+        <label>Período
+            <select name="periodo">
+                {% for val, label in periodos %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Nuevo monto <input type="number" name="monto" step="0.01" min="1" required></label>
+        <button type="submit" class="btn">Actualizar límite</button>
+    </form>
+</section>
+
+<section class="tarjeta">
+    <h2>Autoexclusión</h2>
+    {% if exclusion %}
+    <p class="alerta-jr">Exclusión activa: {{ exclusion.get_tipo_display }}
+        {% if exclusion.fecha_fin %} hasta {{ exclusion.fecha_fin|date:"d/m/Y" }}{% else %} (indefinida){% endif %}
+    </p>
+    <p>No puedes revertirla antes de tiempo.</p>
+    {% else %}
+    <form method="post" class="formulario">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="exclusion">
+        <label>Tipo
+            <select name="tipo">
+                {% for val, label in tipos_exclusion %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="btn btn-sec">Activar autoexclusión</button>
+    </form>
+    {% endif %}
+</section>
+{% endblock %}

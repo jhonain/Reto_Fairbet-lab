@@ -129,7 +129,8 @@ class AsientoContable(models.Model):
             raise ValidationError("El monto debe ser positivo.")
 
     def save(self, *args, **kwargs):
-        if self.pk:
+        # UUID se genera antes del insert; usamos _state.adding de Django
+        if not self._state.adding:
             raise ValidationError("Los asientos son inmutables.")
         self.clean()
         super().save(*args, **kwargs)
@@ -203,4 +204,149 @@ class ServicioBilletera:
             id_transaccion=clave_idempotencia,
             tipo_asiento=TipoAsiento.BLOQUEO_APUESTA,
             id_referencia=id_apuesta,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def retirar(usuario, monto: Decimal, clave_idempotencia: uuid.UUID):
+        if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
+            return
+
+        cuenta_usuario = Cuenta.objects.select_for_update().get(
+            usuario=usuario,
+            tipo_cuenta=TipoCuenta.BILLETERA_USUARIO,
+        )
+        cuenta_casa = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.CASA,
+            usuario__isnull=True,
+        )
+
+        saldo = cuenta_usuario.obtener_saldo_con_bloqueo()
+        if saldo < monto:
+            raise ValidationError(f"Saldo insuficiente para retiro: {saldo}")
+
+        AsientoContable.objects.create(
+            cuenta=cuenta_usuario,
+            monto=monto,
+            direccion=DireccionAsiento.DEBITO,
+            id_transaccion=clave_idempotencia,
+            tipo_asiento=TipoAsiento.RETIRO,
+        )
+        AsientoContable.objects.create(
+            cuenta=cuenta_casa,
+            monto=monto,
+            direccion=DireccionAsiento.CREDITO,
+            id_transaccion=clave_idempotencia,
+            tipo_asiento=TipoAsiento.RETIRO,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def liquidar_ganadora(usuario, stake: Decimal, payout: Decimal, id_apuesta: uuid.UUID, clave_idempotencia: uuid.UUID):
+        if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
+            return
+
+        cuenta_usuario = Cuenta.objects.select_for_update().get(
+            usuario=usuario, tipo_cuenta=TipoCuenta.BILLETERA_USUARIO
+        )
+        cuenta_pendientes = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.APUESTAS_PENDIENTES, usuario__isnull=True
+        )
+        cuenta_casa = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.CASA, usuario__isnull=True
+        )
+
+        # Libera stake de pendientes y paga al usuario; la casa asume la diferencia
+        AsientoContable.objects.create(
+            cuenta=cuenta_pendientes, monto=stake, direccion=DireccionAsiento.DEBITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.GANANCIA_APUESTA, id_referencia=id_apuesta,
+        )
+        AsientoContable.objects.create(
+            cuenta=cuenta_usuario, monto=payout, direccion=DireccionAsiento.CREDITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.GANANCIA_APUESTA, id_referencia=id_apuesta,
+        )
+        ganancia_casa = payout - stake
+        if ganancia_casa > 0:
+            AsientoContable.objects.create(
+                cuenta=cuenta_casa, monto=ganancia_casa, direccion=DireccionAsiento.DEBITO,
+                id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.GANANCIA_APUESTA, id_referencia=id_apuesta,
+            )
+
+    @staticmethod
+    @transaction.atomic
+    def liquidar_perdedora(stake: Decimal, id_apuesta: uuid.UUID, clave_idempotencia: uuid.UUID):
+        if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
+            return
+
+        cuenta_pendientes = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.APUESTAS_PENDIENTES, usuario__isnull=True
+        )
+        cuenta_casa = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.CASA, usuario__isnull=True
+        )
+
+        AsientoContable.objects.create(
+            cuenta=cuenta_pendientes, monto=stake, direccion=DireccionAsiento.DEBITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.PERDIDA_APUESTA, id_referencia=id_apuesta,
+        )
+        AsientoContable.objects.create(
+            cuenta=cuenta_casa, monto=stake, direccion=DireccionAsiento.CREDITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.PERDIDA_APUESTA, id_referencia=id_apuesta,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def transferir(origen, destino_username: str, monto: Decimal, clave_idempotencia: uuid.UUID):
+        if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
+            return
+
+        if origen.username == destino_username:
+            raise ValidationError("No puedes transferirte a ti mismo.")
+
+        cuenta_origen = Cuenta.objects.select_for_update().get(
+            usuario=origen, tipo_cuenta=TipoCuenta.BILLETERA_USUARIO
+        )
+        cuenta_destino = Cuenta.objects.select_for_update().get(
+            usuario__username=destino_username,
+            tipo_cuenta=TipoCuenta.BILLETERA_USUARIO,
+        )
+
+        saldo = cuenta_origen.obtener_saldo_con_bloqueo()
+        if saldo < monto:
+            raise ValidationError(f"Saldo insuficiente: {saldo}")
+
+        AsientoContable.objects.create(
+            cuenta=cuenta_origen,
+            monto=monto,
+            direccion=DireccionAsiento.DEBITO,
+            id_transaccion=clave_idempotencia,
+            tipo_asiento=TipoAsiento.TRANSFERENCIA,
+            notas=f"Para {destino_username}",
+        )
+        AsientoContable.objects.create(
+            cuenta=cuenta_destino,
+            monto=monto,
+            direccion=DireccionAsiento.CREDITO,
+            id_transaccion=clave_idempotencia,
+            tipo_asiento=TipoAsiento.TRANSFERENCIA,
+            notas=f"De {origen.username}",
+        )
+
+
+def asegurar_cuenta_usuario(usuario):
+    """Crea la billetera del usuario si aún no existe."""
+    Cuenta.objects.get_or_create(
+        usuario=usuario,
+        tipo_cuenta=TipoCuenta.BILLETERA_USUARIO,
+        defaults={"moneda": "FIC"},
+    )
+
+
+def asegurar_cuentas_sistema():
+    """Cuentas de la casa y apuestas pendientes (seed / arranque)."""
+    for tipo in (TipoCuenta.CASA, TipoCuenta.APUESTAS_PENDIENTES, TipoCuenta.BONOS):
+        Cuenta.objects.get_or_create(
+            usuario=None,
+            tipo_cuenta=tipo,
+            defaults={"moneda": "FIC"},
         )

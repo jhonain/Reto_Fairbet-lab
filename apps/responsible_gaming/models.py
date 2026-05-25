@@ -65,8 +65,7 @@ class AutoExclusion(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        self.clean()
-        # Calcular fecha_fin automáticamente para temporales
+        # Primero calculamos fecha_fin, luego validamos
         if not self.fecha_fin and self.tipo != TipoExclusion.INDEFINIDA:
             dias_map = {
                 "temporal_7": 7,
@@ -76,6 +75,7 @@ class AutoExclusion(models.Model):
             dias = dias_map.get(self.tipo)
             if dias:
                 self.fecha_fin = self.fecha_inicio + timedelta(days=dias)
+        self.clean()
         super().save(*args, **kwargs)
 
     def desactivar(self):

@@ -66,12 +66,12 @@ class PerfilUsuario(models.Model):
         Verifica si el usuario puede apostar en este momento.
         Requiere: KYC verificado + no autoexcluido + no bloqueado.
         """
-        if self.estado_kyc != EstadoKYC.VERIFICADO:
-            return False
         if self.estado_kyc == EstadoKYC.BLOQUEADO:
             return False
-        # Verificar autoexclusión activa
-        tiene_exclusion_activa = self.exclusiones.filter(
+        if self.estado_kyc != EstadoKYC.VERIFICADO:
+            return False
+        # Autoexclusión vive en responsible_gaming, ligada al User
+        tiene_exclusion_activa = self.usuario.exclusiones.filter(
             activa=True
         ).filter(
             models.Q(fecha_fin__isnull=True) | models.Q(fecha_fin__gt=timezone.now())

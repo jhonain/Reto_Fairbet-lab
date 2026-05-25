@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Billetera — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Billetera</h1>
+<p class="saldo">Saldo: <strong>{{ cuenta.saldo }}</strong> {{ cuenta.moneda }}</p>
+
+<section class="tarjeta">
+    <h2>Recargar fichas (simulado)</h2>
+    <form method="post" class="formulario inline">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="recarga">
+        <label>Monto
+            <input type="number" name="monto" step="0.01" min="1" placeholder="100" required>
+        </label>
+        <button type="submit" class="btn">Recargar</button>
+    </form>
+</section>
+
+<section class="tarjeta">
+    <h2>Retiro simulado</h2>
+    <form method="post" class="formulario inline">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="retiro">
+        <label>Monto
+            <input type="number" name="monto" step="0.01" min="1" required>
+        </label>
+        <button type="submit" class="btn btn-sec">Retirar</button>
+    </form>
+</section>
+
+<section class="tarjeta">
+    <h2>Transferir a otro usuario</h2>
+    <form method="post" class="formulario">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="transferir">
+        <label>Usuario destino
+            <input type="text" name="usuario_destino" placeholder="nombre_usuario" required>
+        </label>
+        <label>Monto
+            <input type="number" name="monto" step="0.01" min="1" required>
+        </label>
+        <button type="submit" class="btn">Transferir</button>
+    </form>
+</section>
+{% endblock %}

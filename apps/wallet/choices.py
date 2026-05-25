@@ -15,6 +15,7 @@ class DireccionAsiento(models.TextChoices):
 class TipoAsiento(models.TextChoices):
     RECARGA = "recarga", "Recarga de fichas"
     RETIRO = "retiro", "Retiro simulado de fichas"
+    TRANSFERENCIA = "transferencia", "Transferencia entre usuarios"
     BLOQUEO_APUESTA = "bloqueo_apuesta", "Bloqueo por apuesta"
     GANANCIA_APUESTA = "ganancia_apuesta", "Ganancia de apuesta"
     PERDIDA_APUESTA = "perdida_apuesta", "Pérdida de apuesta"

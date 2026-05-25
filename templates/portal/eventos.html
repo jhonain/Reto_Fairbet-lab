@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Eventos — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Eventos disponibles</h1>
+
+{% if not eventos_data %}
+<p>No hay eventos. Ejecuta: <code>python manage.py seed_eventos</code></p>
+{% endif %}
+
+{% for item in eventos_data %}
+<article class="tarjeta evento">
+    <h2>{{ item.evento.equipo_local }} vs {{ item.evento.equipo_visitante }}</h2>
+    <p>Inicio: {{ item.evento.inicia_en|date:"d/m/Y H:i" }}</p>
+
+    {% if item.cuotas %}
+    <form method="post" class="formulario form-apuesta">
+        {% csrf_token %}
+        <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
+        <label class="check">
+            <input type="checkbox" name="acepto_juego_responsable" required>
+            Acepto el mensaje de consumo responsable
+        </label>
+        <label>Selección
+            <select name="cuota_id" required>
+                {% for c in item.cuotas %}
+                <option value="{{ c.id }}">{{ c.get_seleccion_display }} @ {{ c.valor }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Monto ({{ monto_min }} — {{ monto_max }} FIC)
+            <input type="number" name="monto" step="0.01" min="{{ monto_min }}" max="{{ monto_max }}" value="10" required>
+        </label>
+        <button type="submit" class="btn">Confirmar apuesta</button>
+    </form>
+    {% else %}
+    <p>Sin cuotas 1X2.</p>
+    {% endif %}
+</article>
+{% endfor %}
+{% endblock %}

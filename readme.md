@@ -1,71 +1,121 @@
 # FairBet Lab
 
-Plataforma educativa de apuestas deportivas con moneda virtual. Proyecto desarrollado como parte del taller de lenguajes de programación — USS.
+Plataforma educativa de apuestas deportivas con moneda virtual (USS — Taller LP).
+
+> **Aviso legal:** Plataforma educativa con moneda virtual. No constituye una casa de apuestas.
 
 ---
 
-## Stack tecnológico
+## Requisitos
 
-- **Backend:** Django 6.0.5 + DRF
-- **Base de datos:** PostgreSQL
-- **Cache / Tiempo real:** Redis + Django Channels
-- **Tareas asíncronas:** Celery
-- **Contenedores:** Docker + Docker Compose
+- Python 3.12+ o Docker Desktop
+- PostgreSQL (vía Docker) o SQLite en local
 
 ---
 
-## Estructura del proyecto
+## Inicio rápido (Docker)
+
+```powershell
+cd Reto_Fairbet-lab
+copy .env.example .env
+docker compose up --build
+```
+
+Abre **http://127.0.0.1:8000/** — contenedores: `fairbet_web`, `fairbet_db`.
+
+Guía completa: [docs/DOCKER.md](docs/DOCKER.md)
+
+> Cierra otros `runserver` en el puerto 8000 (ej. Facturación). FairBet usa `/cuenta/login/`, no `/login/`.
+
+---
+
+## Inicio rápido (sin Docker)
+
+```powershell
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_sistema
+python manage.py seed_eventos
+python manage.py runserver
+```
+
+---
+
+## Estructura
 
 ```
-FairBet_Lab/
+Reto_Fairbet-lab/
 ├── apps/
-│   ├── betting/         # Lógica de apuestas (Apuesta, PiernaApuesta)
-│   ├── dashboard/       # Dashboard del operador (Nivel 3)
-│   ├── events/          # Catálogo de eventos, mercados y cuotas
-│   ├── realtime/        # Cuotas en tiempo real (Nivel 2)
-│   ├── responsible_gaming/  # Controles de juego responsable
-│   ├── users/           # Usuarios, KYC, autoexclusión, límites de depósito
-│   └── wallet/          # Billetera con contabilidad de partida doble
-├── config/              # Configuración de Django (settings, urls, wsgi)
-├── docs/                # Documentación (ADR, bocetos, declaración IA)
-└── scripts/             # Scripts auxiliares
+│   ├── portal/              # Interfaz web (templates)
+│   ├── users/               # KYC, perfil
+│   ├── wallet/              # Partida doble, billetera
+│   ├── events/              # Eventos, mercados, cuotas
+│   ├── betting/             # Apuestas
+│   ├── responsible_gaming/  # Límites, autoexclusión
+│   ├── dashboard/           # Nivel 3 (pendiente)
+│   └── realtime/            # Nivel 2 (pendiente)
+├── templates/               # HTML del portal
+├── static/css/              # Estilos
+├── config/                  # Settings Django
+└── docs/                    # ADR, Docker, declaración IA
 ```
 
 ---
 
-## Estado actual — Nivel 1 (Núcleo obligatorio)
+## Portal web
 
-### ✅ Implementado
-
-| Componente | Apps | Detalle |
-|------------|------|---------|
-| Registro y KYC simulado | `users` | `PerfilUsuario` con DNI, edad, estados KYC. Validaciones de mayoría de edad. |
-| Autoexclusión | `users` | `AutoExclusion` temporal (7/30/90 días) e indefinida. |
-| Límites de depósito | `users` | `LimiteDeposito` diario/semanal/mensual con cooldown 24h para aumentos. |
-| Wallet con partida doble | `wallet` | `Cuenta` y `AsientoContable` con débitos/créditos. `ServicioBilletera` con recarga y bloqueo de apuestas. Idempotencia y `select_for_update`. |
-| Catálogo de eventos | `events` | `Evento` con estados, `Mercado` con tipos (1X2, Over/Under, BTTS, Hándicap), `Cuota` con historial inmutable. |
-| Apuesta simple | `betting` | `Apuesta` con estados, `PiernaApuesta` para selecciones. Idempotencia, verificación de juego responsable. |
-
-### 🔜 Pendiente (vistas/endpoints)
-
-- Vistas de registro y verificación KYC
-- Vistas de recarga/retiro/transferencia en wallet
-- Vistas de listado de eventos y mercados
-- Vista de creación y liquidación de apuestas
-- Vistas de configuración de límites y autoexclusión
+| Ruta | Descripción |
+|------|-------------|
+| `/` | Inicio |
+| `/registro/` | Alta + KYC |
+| `/cuenta/login/` | Sesión |
+| `/perfil/` | Verificar KYC (demo) |
+| `/wallet/` | Saldo, recarga, retiro |
+| `/eventos/` | Apostar 1X2 |
+| `/apuestas/` | Historial |
+| `/juego-responsable/` | Límites y autoexclusión |
 
 ---
 
-## Cómo ejecutar
+## API REST
 
-```bash
-docker-compose up --build
+Prefijo `/api/` — ver tabla en commits o usar Postman. Ejemplos: `/api/wallet/saldo/`, `/api/apuestas/simple/`.
+
+---
+
+## Tests
+
+```powershell
+python manage.py test apps.wallet.tests apps.betting.tests apps.responsible_gaming.tests
 ```
+
+---
+
+## Rama del grupo (Git)
+
+```powershell
+git checkout -b feat/nivel1-portal-api
+git add .
+git status
+git commit -m "feat: portal web, API nivel 1 y tests wallet/betting"
+git push -u origin feat/nivel1-portal-api
+```
+
+Usen **Conventional Commits** y marquen `[ai-assisted]` si aplica (ver `docs/anti-ai-disclosure.md`).
 
 ---
 
 ## Documentación
 
-- `/docs/adr/` — Architectural Decision Records
-- `/docs/sketches/` — Bocetos de ER y máquinas de estado
-- `/docs/anti-ai-disclosure.md` — Declaración de uso de IA
+- [docs/DOCKER.md](docs/DOCKER.md)
+- [docs/adr/](docs/adr/)
+- [docs/anti-ai-disclosure.md](docs/anti-ai-disclosure.md)
+
+---
+
+## Pendiente (siguientes sprints)
+
+- Channels / cuotas en vivo
+- Auditoría hash + dashboard operador
+- Hypothesis y cobertura 80 %
+- Bocetos en `docs/sketches/`

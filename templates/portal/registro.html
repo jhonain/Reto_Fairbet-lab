@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Registro — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Registro + KYC</h1>
+<form method="post" class="formulario">
+    {% csrf_token %}
+    <label>Usuario <input type="text" name="username" required></label>
+    <label>Contraseña <input type="password" name="password" required></label>
+    <label>DNI (8 dígitos) <input type="text" name="dni" maxlength="8" required></label>
+    <label>Fecha de nacimiento <input type="date" name="fecha_nacimiento" required></label>
+    <button type="submit" class="btn">Registrarme</button>
+</form>
+{% endblock %}

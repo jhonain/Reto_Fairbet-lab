@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Inicio — FairBet Lab{% endblock %}
+{% block content %}
+<section class="hero">
+    <span class="badge">Moneda virtual · Sin dinero real</span>
+    <h1>FairBet Lab</h1>
+    <p>Simulador educativo de apuestas deportivas con fichas (FIC).</p>
+    <p>Practica KYC, billetera con partida doble y juego responsable.</p>
+    <p style="margin-top: 1.25rem;">
+        <a class="btn" href="{% url 'portal-registro' %}">Crear cuenta</a>
+        <a class="btn btn-sec" href="{% url 'portal-login' %}">Iniciar sesión</a>
+    </p>
+</section>
+
+<div class="pasos">
+    <div class="paso"><strong>1.</strong> Regístrate con DNI y fecha de nacimiento (KYC).</div>
+    <div class="paso"><strong>2.</strong> Verifica tu perfil y recarga fichas en la billetera.</div>
+    <div class="paso"><strong>3.</strong> Apuesta en eventos 1X2 con mensaje de consumo responsable.</div>
+</div>
+{% endblock %}
