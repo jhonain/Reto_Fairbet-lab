@@ -2,30 +2,35 @@ import uuid
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from apps.users.models import PerfilUsuario
+from apps.betting.models import Apuesta
+from apps.betting.services import MONTO_MAXIMO, MONTO_MINIMO, crear_apuesta_simple
+from apps.events.choices import EstadoEvento, TipoMercado
+from apps.events.models import Evento
+from apps.responsible_gaming.choices import PeriodoLimite, TipoExclusion
+from apps.responsible_gaming.helpers import crear_limites_por_defecto
+from apps.responsible_gaming.models import AutoExclusion, LimiteDeposito
+from apps.responsible_gaming.services import (
+    monto_recargado_en_periodo,
+    validar_limite_recarga,
+)
 from apps.users.choices import EstadoKYC
+from apps.users.models import PerfilUsuario
 from apps.users.serializers import RegistroUsuarioSerializer
 from apps.users.services import obtener_estado_operativo
-from apps.wallet.models import (
-    Cuenta, ServicioBilletera, asegurar_cuenta_usuario, asegurar_cuentas_sistema,
-)
 from apps.wallet.choices import TipoCuenta
-from apps.events.models import Evento, Mercado, Cuota
-from apps.events.choices import EstadoEvento, TipoMercado
-from apps.betting.models import Apuesta
-from apps.betting.services import crear_apuesta_simple, MONTO_MINIMO, MONTO_MAXIMO
-from apps.responsible_gaming.helpers import crear_limites_por_defecto
-from apps.responsible_gaming.models import LimiteDeposito, AutoExclusion
-from apps.responsible_gaming.choices import TipoExclusion, PeriodoLimite
-from apps.responsible_gaming.services import monto_recargado_en_periodo, validar_limite_recarga
+from apps.wallet.models import (
+    Cuenta,
+    ServicioBilletera,
+    asegurar_cuenta_usuario,
+    asegurar_cuentas_sistema,
+)
 
 
 Usuario = get_user_model()
@@ -73,7 +78,7 @@ def registro(request):
             asegurar_cuentas_sistema()
             asegurar_cuenta_usuario(user)
             crear_limites_por_defecto(user)
-            messages.success(request, "Cuenta creada. Inicia sesión.")
+            messages.success(request, "Cuenta creada. Inicia sesion.")
             return redirect("portal-login")
 
     return render(request, "portal/registro.html")
@@ -90,7 +95,7 @@ def cuenta_login(request):
         if user:
             login(request, user)
             return redirect("portal-eventos")
-        messages.error(request, "Usuario o contraseña incorrectos.")
+        messages.error(request, "Usuario o contrasena incorrectos.")
     return render(request, "portal/login.html")
 
 
@@ -117,7 +122,8 @@ def perfil(request):
 def wallet(request):
     asegurar_cuenta_usuario(request.user)
     cuenta = Cuenta.objects.get(
-        usuario=request.user, tipo_cuenta=TipoCuenta.BILLETERA_USUARIO
+        usuario=request.user,
+        tipo_cuenta=TipoCuenta.BILLETERA_USUARIO,
     )
 
     if request.method == "POST":
@@ -125,7 +131,7 @@ def wallet(request):
         try:
             monto = Decimal(request.POST.get("monto", "0"))
         except (InvalidOperation, TypeError):
-            messages.error(request, "Monto inválido.")
+            messages.error(request, "Monto invalido.")
             return redirect("portal-wallet")
 
         clave = uuid.uuid4()
@@ -156,8 +162,8 @@ def eventos(request):
     lista = Evento.objects.filter(estado=EstadoEvento.PROGRAMADO).order_by("inicia_en")
     eventos_data = []
     for ev in lista:
-        m = ev.mercados.filter(tipo=TipoMercado.UNO_X_DOS).first()
-        cuotas = list(m.cuotas.filter(activa=True)) if m else []
+        mercado = ev.mercados.filter(tipo=TipoMercado.UNO_X_DOS).first()
+        cuotas = list(mercado.cuotas.filter(activa=True)) if mercado else []
         eventos_data.append({"evento": ev, "cuotas": cuotas})
 
     if request.method == "POST":
@@ -176,12 +182,16 @@ def eventos(request):
         try:
             monto = Decimal(request.POST.get("monto", "0"))
         except (InvalidOperation, TypeError):
-            messages.error(request, "Monto inválido.")
+            messages.error(request, "Monto invalido.")
             return redirect("portal-eventos")
 
         try:
             apuesta = crear_apuesta_simple(
-                request.user, cuota_id, monto, clave, True
+                request.user,
+                cuota_id,
+                monto,
+                clave,
+                True,
             )
             messages.success(
                 request,
@@ -212,6 +222,7 @@ def juego_responsable(request):
         limites.append({
             "obj": lim,
             "usado": monto_recargado_en_periodo(request.user, lim.periodo),
+            "puede_aplicar_pendiente": lim.puede_aplicar_aumento_pendiente(),
         })
 
     exclusion = request.user.exclusiones.filter(activa=True).first()
@@ -223,19 +234,39 @@ def juego_responsable(request):
             try:
                 monto = Decimal(request.POST.get("monto", "0"))
                 limite, _ = LimiteDeposito.objects.get_or_create(
-                    usuario=request.user, periodo=periodo, defaults={"monto": monto}
+                    usuario=request.user,
+                    periodo=periodo,
+                    defaults={"monto": monto},
                 )
+                monto_anterior = limite.monto
                 limite.actualizar_monto(monto)
-                messages.success(request, "Límite actualizado.")
+                if monto > monto_anterior:
+                    messages.success(
+                        request,
+                        "Aumento registrado como pendiente por 24 horas.",
+                    )
+                else:
+                    messages.success(request, "Limite actualizado.")
             except (ValidationError, InvalidOperation) as e:
+                messages.error(request, str(e))
+        elif accion == "aplicar_limite_pendiente":
+            periodo = request.POST.get("periodo")
+            try:
+                limite = LimiteDeposito.objects.get(
+                    usuario=request.user,
+                    periodo=periodo,
+                )
+                limite.aplicar_aumento_pendiente()
+                messages.success(request, "Aumento pendiente aplicado.")
+            except (LimiteDeposito.DoesNotExist, ValidationError) as e:
                 messages.error(request, str(e))
         elif accion == "exclusion":
             tipo = request.POST.get("tipo")
             if exclusion:
-                messages.error(request, "Ya tienes una exclusión activa.")
+                messages.error(request, "Ya tienes una exclusion activa.")
             else:
                 AutoExclusion.objects.create(usuario=request.user, tipo=tipo)
-                messages.warning(request, "Autoexclusión activada.")
+                messages.warning(request, "Autoexclusion activada.")
         return redirect("portal-responsable")
 
     return render(request, "portal/responsable.html", {

@@ -1,25 +1,62 @@
 {% extends "base.html" %}
-{% block title %}Juego responsable — FairBet Lab{% endblock %}
+{% block title %}Juego responsable - FairBet Lab{% endblock %}
 {% block content %}
 <h1>Juego responsable</h1>
 
 <section class="tarjeta">
-    <h2>Límites de recarga</h2>
-    <p>Bajar el límite es inmediato. Subirlo espera 24 horas.</p>
+    <h2>Limites de recarga</h2>
+    <p>Bajar el limite es inmediato. Subirlo queda pendiente por 24 horas.</p>
     <table class="tabla">
-        <tr><th>Período</th><th>Límite</th><th>Usado</th></tr>
+        <tr>
+            <th>Periodo</th>
+            <th>Limite actual</th>
+            <th>Usado</th>
+            <th>Aumento pendiente</th>
+            <th>Disponible desde</th>
+            <th>Accion</th>
+        </tr>
         {% for item in limites %}
         <tr>
             <td>{{ item.obj.get_periodo_display }}</td>
             <td>{{ item.obj.monto }} FIC</td>
             <td>{{ item.usado }} FIC</td>
+            <td>
+                {% if item.obj.monto_pendiente %}
+                    {{ item.obj.monto_pendiente }} FIC
+                {% else %}
+                    Sin aumento pendiente
+                {% endif %}
+            </td>
+            <td>
+                {% if item.obj.pendiente_aplicable_desde %}
+                    {{ item.obj.pendiente_aplicable_desde|date:"d/m/Y H:i" }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>
+                {% if item.obj.monto_pendiente %}
+                    {% if item.puede_aplicar_pendiente %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="aplicar_limite_pendiente">
+                        <input type="hidden" name="periodo" value="{{ item.obj.periodo }}">
+                        <button type="submit" class="btn">Aplicar aumento</button>
+                    </form>
+                    {% else %}
+                    En espera
+                    {% endif %}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </table>
     <form method="post" class="formulario">
         {% csrf_token %}
         <input type="hidden" name="accion" value="limite">
-        <label>Período
+        <label>Periodo
             <select name="periodo">
                 {% for val, label in periodos %}
                 <option value="{{ val }}">{{ label }}</option>
@@ -27,14 +64,14 @@
             </select>
         </label>
         <label>Nuevo monto <input type="number" name="monto" step="0.01" min="1" required></label>
-        <button type="submit" class="btn">Actualizar límite</button>
+        <button type="submit" class="btn">Actualizar limite</button>
     </form>
 </section>
 
 <section class="tarjeta">
-    <h2>Autoexclusión</h2>
+    <h2>Autoexclusion</h2>
     {% if exclusion %}
-    <p class="alerta-jr">Exclusión activa: {{ exclusion.get_tipo_display }}
+    <p class="alerta-jr">Exclusion activa: {{ exclusion.get_tipo_display }}
         {% if exclusion.fecha_fin %} hasta {{ exclusion.fecha_fin|date:"d/m/Y" }}{% else %} (indefinida){% endif %}
     </p>
     <p>No puedes revertirla antes de tiempo.</p>
@@ -49,7 +86,7 @@
                 {% endfor %}
             </select>
         </label>
-        <button type="submit" class="btn btn-sec">Activar autoexclusión</button>
+        <button type="submit" class="btn btn-sec">Activar autoexclusion</button>
     </form>
     {% endif %}
 </section>
