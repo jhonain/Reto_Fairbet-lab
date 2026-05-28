@@ -13,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from apps.users.models import PerfilUsuario
 from apps.users.choices import EstadoKYC
 from apps.users.serializers import RegistroUsuarioSerializer
+from apps.users.services import obtener_estado_operativo
 from apps.wallet.models import (
     Cuenta, ServicioBilletera, asegurar_cuenta_usuario, asegurar_cuentas_sistema,
 )
@@ -101,11 +102,15 @@ def cuenta_logout(request):
 @login_required
 def perfil(request):
     perfil_u = request.user.perfil
+    estado_operativo = obtener_estado_operativo(request.user)
     if request.method == "POST" and request.POST.get("accion") == "verificar_kyc":
         perfil_u.verificar()
         messages.success(request, "KYC verificado (simulado).")
         return redirect("portal-perfil")
-    return render(request, "portal/perfil.html", {"perfil": perfil_u})
+    return render(request, "portal/perfil.html", {
+        "perfil": perfil_u,
+        "estado_operativo": estado_operativo,
+    })
 
 
 @login_required
@@ -147,6 +152,7 @@ def wallet(request):
 
 @login_required
 def eventos(request):
+    estado_operativo = obtener_estado_operativo(request.user)
     lista = Evento.objects.filter(estado=EstadoEvento.PROGRAMADO).order_by("inicia_en")
     eventos_data = []
     for ev in lista:
@@ -155,6 +161,10 @@ def eventos(request):
         eventos_data.append({"evento": ev, "cuotas": cuotas})
 
     if request.method == "POST":
+        if not estado_operativo["puede_apostar"]:
+            messages.error(request, estado_operativo["motivo"])
+            return redirect("portal-eventos")
+
         cuota_id = request.POST.get("cuota_id")
         acepto = request.POST.get("acepto_juego_responsable")
         clave = request.POST.get("clave_idempotencia") or str(uuid.uuid4())
@@ -185,6 +195,7 @@ def eventos(request):
         "eventos_data": eventos_data,
         "monto_min": MONTO_MINIMO,
         "monto_max": MONTO_MAXIMO,
+        "estado_operativo": estado_operativo,
     })
 
 
