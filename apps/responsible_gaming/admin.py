@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import AutoExclusion, LimiteDeposito
+from .models import AutoExclusion, SuspiciousActivity, LimiteDeposito
 
 
 @admin.register(AutoExclusion)
@@ -58,3 +58,18 @@ class LimiteDepositoAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="Puede aplicar pendiente")
     def puede_aplicar_pendiente_admin(self, obj):
         return obj.puede_aplicar_aumento_pendiente()
+
+
+@admin.register(SuspiciousActivity)
+class SuspiciousActivityAdmin(admin.ModelAdmin):
+    list_display = (
+        "usuario",
+        "regla",
+        "estado",
+        "ip_address",
+        "fecha_creacion",
+    )
+    list_filter = ("regla", "estado", "fecha_creacion")
+    search_fields = ("usuario__username", "ip_address", "descripcion")
+    ordering = ("-fecha_creacion",)
+    readonly_fields = ("fecha_creacion",)

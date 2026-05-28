@@ -7,12 +7,20 @@ from rest_framework.views import APIView
 
 from apps.wallet.models import asegurar_cuenta_usuario, asegurar_cuentas_sistema
 from apps.responsible_gaming.helpers import crear_limites_por_defecto
+from apps.responsible_gaming.services import registrar_alerta_multiples_cuentas_ip
 from .models import PerfilUsuario
 from .choices import EstadoKYC
 from .serializers import RegistroUsuarioSerializer
 
 
 Usuario = get_user_model()
+
+
+def _obtener_ip_request(request):
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
 
 
 class RegistroView(APIView):
@@ -39,6 +47,14 @@ class RegistroView(APIView):
             asegurar_cuentas_sistema()
             asegurar_cuenta_usuario(user)
             crear_limites_por_defecto(user)
+
+        try:
+            registrar_alerta_multiples_cuentas_ip(
+                user,
+                _obtener_ip_request(request),
+            )
+        except Exception:
+            pass
 
         return Response(
             {"id": user.id, "username": user.username, "estado_kyc": EstadoKYC.PENDIENTE},

@@ -146,3 +146,59 @@
 * Revisé los cambios antes de integrarlos.
 * Ejecuté verificaciones del proyecto.
 
+---
+
+### 2026-05-28 — Bloqueo de recargas con autoexclusión vigente (Eduardo Puicon Paico)
+
+| Fecha | Parte del proyecto | Tipo de uso | Detalle |
+|-------|-------------------|-------------|---------|
+| 2026-05-28 | `apps/responsible_gaming/services.py` | Revisar regla de bloqueo | ChatGPT/Codex se usó como apoyo para ordenar la validación de recargas cuando existe una autoexclusión vigente. Yo adapté la lógica para reutilizar la consulta de autoexclusión vigente sin modificar wallet. |
+| 2026-05-28 | `templates/portal/responsable.html` | Reflejar regla en la interfaz | ChatGPT/Codex se usó como apoyo para redactar un aviso claro sobre el bloqueo de recargas durante una autoexclusión vigente. Yo revisé que el texto corresponda a lo realmente implementado. |
+| 2026-05-28 | `docs/adr/0004-bloqueo-recargas-autoexclusion.md` | Redactar decisión técnica | ChatGPT/Codex se usó como apoyo para estructurar el ADR según la plantilla del reto. Yo ajusté la decisión para que refleje únicamente lo implementado en esta fase. |
+
+## Lo que hice yo en esta fase
+
+* Revisé que wallet ya llama a validar_limite_recarga antes de recargar.
+* Adapté la validación para que considere autoexclusión vigente.
+* Validé que la regla pertenezca a responsible_gaming y no a wallet.
+* Ejecuté verificaciones del proyecto.
+* Revisé que no se documente como implementado algo que esta fase no toca.
+
+---
+
+### 2026-05-28 — Anti-fraude básico por IP (Eduardo Puicon Paico)
+
+| Fecha | Parte del proyecto | Tipo de uso | Detalle |
+|-------|-------------------|-------------|---------|
+| 2026-05-28 | `apps/responsible_gaming/models.py` | Revisar diseño de alerta | ChatGPT/Codex se usó como apoyo para estructurar un modelo simple de alerta antifraude. Yo adapté el modelo para que sea revisable desde el admin y no bloquee automáticamente al usuario. |
+| 2026-05-28 | `apps/responsible_gaming/services.py` | Organizar regla antifraude | ChatGPT/Codex se usó como apoyo para ordenar la regla de múltiples cuentas por IP. Yo mantuve la implementación básica y limitada a una primera versión. |
+| 2026-05-28 | `apps/users/views.py` | Integrar evaluación tras registro | ChatGPT/Codex se usó como apoyo para ubicar el punto donde evaluar la IP después de crear un usuario. Yo revisé que la alerta no rompa el flujo de registro. |
+| 2026-05-28 | `apps/responsible_gaming/admin.py` | Revisar visualización admin | ChatGPT/Codex se usó como apoyo para mostrar las alertas en el panel administrativo. Yo validé que sea útil para revisión manual. |
+| 2026-05-28 | `apps/responsible_gaming/migrations/0003_suspiciousactivity.py` | Crear migración | ChatGPT/Codex se usó como apoyo para revisar que la migración corresponda al modelo de alerta implementado. Yo validé que no incluya reglas fuera de esta fase. |
+| 2026-05-28 | `docs/adr/0006-antifraude-ip.md` | Redactar decisión técnica | ChatGPT/Codex se usó como apoyo para estructurar el ADR según la plantilla del reto. Yo ajusté el contenido a lo realmente implementado. |
+
+## Lo que hice yo en esta fase
+
+* Revisé la regla de múltiples cuentas desde una misma IP.
+* Decidí usar alertas revisables en lugar de bloqueo automático.
+* Validé que esta fase no implemente reglas no existentes como patrones de apuestas o cash-out.
+* Ejecuté verificaciones del proyecto.
+* Revisé que la documentación refleje solo lo implementado.
+
+---
+
+### 2026-05-28 — Mensaje obligatorio de consumo responsable (Eduardo Puicon Paico)
+
+| Fecha | Parte del proyecto | Tipo de uso | Detalle |
+|-------|-------------------|-------------|---------|
+| 2026-05-28 | `apps/portal/views.py` | Revisar integración del mensaje | ChatGPT/Codex se usó como apoyo para revisar que el mensaje de consumo responsable se envíe al template desde la vista correspondiente. Yo validé que se use la constante existente y no texto duplicado. |
+| 2026-05-28 | `templates/portal/eventos.html` | Mejorar visualización en interfaz | ChatGPT/Codex se usó como apoyo para ordenar la presentación del mensaje obligatorio antes de confirmar una apuesta. Yo revisé que el texto se vea en la pantalla real de eventos. |
+| 2026-05-28 | `docs/adr/0005-mensaje-consumo-responsable.md` | Redactar decisión técnica | ChatGPT/Codex se usó como apoyo para estructurar el ADR según la plantilla del reto. Yo ajusté el contenido a lo realmente implementado. |
+
+## Lo que hice yo en esta fase
+
+* Revisé dónde se realiza la apuesta desde la interfaz.
+* Validé que el mensaje obligatorio se tome desde la constante existente.
+* Revisé que el mensaje sea visible antes de confirmar la apuesta.
+* Ejecuté verificaciones del proyecto.
+

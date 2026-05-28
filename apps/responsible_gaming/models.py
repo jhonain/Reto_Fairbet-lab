@@ -13,6 +13,12 @@ from .choices import TipoExclusion, PeriodoLimite
 Usuario = get_user_model()
 
 
+class EstadoActividadSospechosa(models.TextChoices):
+    PENDIENTE = "pendiente", "Pendiente"
+    REVISADO = "revisado", "Revisado"
+    DESCARTADO = "descartado", "Descartado"
+
+
 class AutoExclusion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     usuario = models.ForeignKey(
@@ -87,6 +93,57 @@ class AutoExclusion(models.Model):
     def desactivar(self):
         self.activa = False
         self.save(update_fields=["activa"])
+
+
+class SuspiciousActivity(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="actividades_sospechosas",
+        verbose_name="Usuario",
+    )
+    regla = models.CharField(
+        max_length=80,
+        verbose_name="Regla",
+    )
+    descripcion = models.TextField(
+        verbose_name="Descripcion",
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name="Direccion IP",
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Metadata",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoActividadSospechosa.choices,
+        default=EstadoActividadSospechosa.PENDIENTE,
+        verbose_name="Estado",
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de creacion",
+    )
+
+    class Meta:
+        db_table = "responsible_gaming_suspiciousactivity"
+        verbose_name = "Actividad sospechosa"
+        verbose_name_plural = "Actividades sospechosas"
+        indexes = [
+            models.Index(fields=["regla", "ip_address", "fecha_creacion"]),
+            models.Index(fields=["estado", "fecha_creacion"]),
+        ]
+
+    def __str__(self):
+        return f"{self.regla} - {self.estado}"
 
 
 class LimiteDeposito(models.Model):
