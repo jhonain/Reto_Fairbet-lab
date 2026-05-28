@@ -2,15 +2,17 @@ import uuid
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from apps.users.models import PerfilUsuario
 from apps.users.choices import EstadoKYC
+from apps.users.serializers import RegistroUsuarioSerializer
 from apps.wallet.models import (
     Cuenta, ServicioBilletera, asegurar_cuenta_usuario, asegurar_cuentas_sistema,
 )
@@ -25,6 +27,9 @@ from apps.responsible_gaming.choices import TipoExclusion, PeriodoLimite
 from apps.responsible_gaming.services import monto_recargado_en_periodo, validar_limite_recarga
 
 
+Usuario = get_user_model()
+
+
 def inicio(request):
     if request.user.is_authenticated:
         return redirect("portal-eventos")
@@ -37,23 +42,31 @@ def registro(request):
         return redirect("portal-eventos")
 
     if request.method == "POST":
-        username = request.POST.get("username", "").strip()
-        password = request.POST.get("password", "")
-        dni = request.POST.get("dni", "").strip()
-        fecha = request.POST.get("fecha_nacimiento", "")
+        datos = {
+            "username": request.POST.get("username", "").strip(),
+            "password": request.POST.get("password", ""),
+            "dni": request.POST.get("dni", "").strip(),
+            "fecha_nacimiento": request.POST.get("fecha_nacimiento", ""),
+        }
+        serializer = RegistroUsuarioSerializer(data=datos)
 
-        if not all([username, password, dni, fecha]):
-            messages.error(request, "Completa todos los campos.")
+        if not serializer.is_valid():
+            for campo, errores in serializer.errors.items():
+                mensajes = " ".join(str(error) for error in errores)
+                messages.error(request, f"{campo}: {mensajes}")
             return render(request, "portal/registro.html")
 
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Ese usuario ya existe.")
-            return render(request, "portal/registro.html")
+        datos_validados = serializer.validated_data
 
-        try:
-            user = User.objects.create_user(username=username, password=password)
+        with transaction.atomic():
+            user = Usuario.objects.create_user(
+                username=datos_validados["username"],
+                password=datos_validados["password"],
+            )
             PerfilUsuario.objects.create(
-                usuario=user, dni=dni, fecha_nacimiento=fecha,
+                usuario=user,
+                dni=datos_validados["dni"],
+                fecha_nacimiento=datos_validados["fecha_nacimiento"],
                 estado_kyc=EstadoKYC.PENDIENTE,
             )
             asegurar_cuentas_sistema()
@@ -61,8 +74,6 @@ def registro(request):
             crear_limites_por_defecto(user)
             messages.success(request, "Cuenta creada. Inicia sesión.")
             return redirect("portal-login")
-        except ValidationError as e:
-            messages.error(request, str(e))
 
     return render(request, "portal/registro.html")
 

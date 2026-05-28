@@ -131,3 +131,52 @@ class RegistroUsuarioApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Usuario.objects.filter(username="fallido").exists())
         self.assertFalse(PerfilUsuario.objects.filter(usuario__username="fallido").exists())
+
+
+class RegistroUsuarioWebTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = "/registro/"
+
+    def datos_registro(self, username="webnuevo", dni=None, fecha_nacimiento="2000-01-01"):
+        return {
+            "username": username,
+            "password": "clave-segura-123",
+            "dni": dni or generar_dni_valido("7654321"),
+            "fecha_nacimiento": fecha_nacimiento,
+        }
+
+    def test_registro_web_con_dni_con_letras_no_crea_usuario(self):
+        response = self.client.post(
+            self.url,
+            data=self.datos_registro(username="dni_letras", dni="RRRRRRRR"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Usuario.objects.filter(username="dni_letras").exists())
+        self.assertFalse(PerfilUsuario.objects.filter(usuario__username="dni_letras").exists())
+
+    def test_registro_web_con_menor_de_edad_no_crea_usuario(self):
+        menor_de_edad = date.today().replace(year=date.today().year - 17).isoformat()
+
+        response = self.client.post(
+            self.url,
+            data=self.datos_registro(
+                username="web_menor",
+                fecha_nacimiento=menor_de_edad,
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Usuario.objects.filter(username="web_menor").exists())
+        self.assertFalse(PerfilUsuario.objects.filter(usuario__username="web_menor").exists())
+
+    def test_registro_web_correcto_crea_usuario_y_perfil(self):
+        response = self.client.post(
+            self.url,
+            data=self.datos_registro(),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        user = Usuario.objects.get(username="webnuevo")
+        self.assertTrue(PerfilUsuario.objects.filter(usuario=user).exists())
