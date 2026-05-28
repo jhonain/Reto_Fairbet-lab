@@ -76,6 +76,14 @@ class AutoExclusion(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
+    @property
+    def esta_vigente(self):
+        if not self.activa:
+            return False
+        if self.fecha_fin is None:
+            return True
+        return self.fecha_fin > timezone.now()
+
     def desactivar(self):
         self.activa = False
         self.save(update_fields=["activa"])

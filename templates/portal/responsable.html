@@ -71,7 +71,7 @@
 <section class="tarjeta">
     <h2>Autoexclusion</h2>
     {% if exclusion %}
-    <p class="alerta-jr">Exclusion activa: {{ exclusion.get_tipo_display }}
+    <p class="alerta-jr">Autoexclusion vigente: {{ exclusion.get_tipo_display }}
         {% if exclusion.fecha_fin %} hasta {{ exclusion.fecha_fin|date:"d/m/Y" }}{% else %} (indefinida){% endif %}
     </p>
     <p>No puedes revertirla antes de tiempo.</p>

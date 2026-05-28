@@ -2,13 +2,13 @@ from decimal import Decimal
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 
 from apps.wallet.models import AsientoContable, Cuenta
 from apps.wallet.choices import TipoAsiento, DireccionAsiento, TipoCuenta
 from .choices import PeriodoLimite
-from .models import LimiteDeposito
+from .models import AutoExclusion, LimiteDeposito
 
 
 def _inicio_periodo(periodo):
@@ -47,3 +47,12 @@ def validar_limite_recarga(usuario, monto: Decimal):
                 f"Límite {limite.get_periodo_display()} excedido. "
                 f"Usado: {usado}, límite: {limite.monto}"
             )
+
+
+def obtener_autoexclusion_vigente(usuario):
+    return AutoExclusion.objects.filter(
+        usuario=usuario,
+        activa=True,
+    ).filter(
+        Q(fecha_fin__isnull=True) | Q(fecha_fin__gt=timezone.now())
+    ).order_by("-fecha_creacion").first()

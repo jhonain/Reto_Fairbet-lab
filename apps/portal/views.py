@@ -18,6 +18,7 @@ from apps.responsible_gaming.helpers import crear_limites_por_defecto
 from apps.responsible_gaming.models import AutoExclusion, LimiteDeposito
 from apps.responsible_gaming.services import (
     monto_recargado_en_periodo,
+    obtener_autoexclusion_vigente,
     validar_limite_recarga,
 )
 from apps.users.choices import EstadoKYC
@@ -225,7 +226,7 @@ def juego_responsable(request):
             "puede_aplicar_pendiente": lim.puede_aplicar_aumento_pendiente(),
         })
 
-    exclusion = request.user.exclusiones.filter(activa=True).first()
+    exclusion = obtener_autoexclusion_vigente(request.user)
 
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -262,7 +263,7 @@ def juego_responsable(request):
                 messages.error(request, str(e))
         elif accion == "exclusion":
             tipo = request.POST.get("tipo")
-            if exclusion:
+            if obtener_autoexclusion_vigente(request.user):
                 messages.error(request, "Ya tienes una exclusion activa.")
             else:
                 AutoExclusion.objects.create(usuario=request.user, tipo=tipo)

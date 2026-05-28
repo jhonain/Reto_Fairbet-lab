@@ -126,3 +126,23 @@
 * Separé la explicación de estudio en PDF sin agregar comentarios innecesarios dentro del código fuente.
 * Preparé la documentación técnica de mi decisión sobre límites de depósito mediante ADR.
 * Revisé que no se documente como implementado algo que todavía no está en el código.
+
+---
+
+### 2026-05-28 — Autoexclusión vigente (Eduardo Puicon Paico)
+
+| Fecha | Parte del proyecto | Tipo de uso | Detalle |
+|-------|-------------------|-------------|---------|
+| 2026-05-28 | `apps/responsible_gaming/models.py` | Revisar regla de vigencia | ChatGPT/Codex se usó como apoyo para ordenar la regla que determina si una autoexclusión está vigente. Yo adapté la lógica para diferenciar exclusiones indefinidas, temporales vigentes y temporales vencidas. |
+| 2026-05-28 | `apps/responsible_gaming/services.py` | Organizar lógica reutilizable | ChatGPT/Codex se usó como apoyo para centralizar la consulta de autoexclusión vigente en un servicio simple. Yo revisé que pueda reutilizarse desde API y portal. |
+| 2026-05-28 | `apps/responsible_gaming/views.py` | Revisar flujo API | ChatGPT/Codex se usó como apoyo para revisar que el endpoint consulte únicamente autoexclusiones vigentes. Yo validé que no se documente como activo algo vencido. |
+| 2026-05-28 | `apps/portal/views.py` y `templates/portal/responsable.html` | Reflejar cambios en la web | ChatGPT/Codex se usó como apoyo para mostrar correctamente la autoexclusión vigente en la pantalla de juego responsable. Yo probé el comportamiento desde la interfaz. |
+| 2026-05-28 | `docs/adr/0003-politica-autoexclusion.md` | Redactar decisión técnica | ChatGPT/Codex se usó como apoyo para estructurar el ADR según la plantilla del reto. Yo ajusté el contenido a lo realmente implementado. |
+
+## Lo que hice yo en esta fase
+
+* Revisé la diferencia entre autoexclusión activa y autoexclusión vigente.
+* Validé que una autoexclusión vencida no se muestre como vigente.
+* Revisé los cambios antes de integrarlos.
+* Ejecuté verificaciones del proyecto.
+

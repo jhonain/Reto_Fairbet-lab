@@ -1,14 +1,15 @@
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.responsible_gaming.services import monto_recargado_en_periodo
+from apps.responsible_gaming.services import (
+    monto_recargado_en_periodo,
+    obtener_autoexclusion_vigente,
+)
 from .models import AutoExclusion, LimiteDeposito
 from .choices import TipoExclusion, PeriodoLimite
 
@@ -104,14 +105,14 @@ class AutoExclusionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        activa = request.user.exclusiones.filter(activa=True).first()
-        if not activa:
+        exclusion = obtener_autoexclusion_vigente(request.user)
+        if not exclusion:
             return Response({"activa": False})
         return Response({
             "activa": True,
-            "tipo": activa.tipo,
-            "fecha_inicio": activa.fecha_inicio.isoformat(),
-            "fecha_fin": activa.fecha_fin.isoformat() if activa.fecha_fin else None,
+            "tipo": exclusion.tipo,
+            "fecha_inicio": exclusion.fecha_inicio.isoformat(),
+            "fecha_fin": exclusion.fecha_fin.isoformat() if exclusion.fecha_fin else None,
         })
 
     def post(self, request):
@@ -122,10 +123,7 @@ class AutoExclusionView(APIView):
                 status=400,
             )
 
-        ya_tiene = request.user.exclusiones.filter(activa=True).filter(
-            Q(fecha_fin__isnull=True) | Q(fecha_fin__gt=timezone.now())
-        ).exists()
-        if ya_tiene:
+        if obtener_autoexclusion_vigente(request.user):
             return Response(
                 {"error": "Ya tienes una autoexclusion activa. No puedes revertirla."},
                 status=400,
