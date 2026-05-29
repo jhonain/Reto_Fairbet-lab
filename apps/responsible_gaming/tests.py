@@ -37,9 +37,18 @@ class LimitesDepositoTests(TestCase):
 
     def test_subir_limite_requiere_cooldown(self):
         lim = LimiteDeposito.objects.get(usuario=self.user, periodo=PeriodoLimite.DIARIO)
-        lim.actualizar_monto(Decimal("600.0000"))  # primer aumento: ok
+        monto_inicial = lim.monto
+        nuevo_monto = Decimal("600.0000")
+
+        lim.actualizar_monto(nuevo_monto)
+        lim.refresh_from_db()
+
+        self.assertEqual(lim.monto, monto_inicial)
+        self.assertEqual(lim.monto_pendiente, nuevo_monto)
+        self.assertIsNotNone(lim.pendiente_aplicable_desde)
+        self.assertIsNotNone(lim.enfriamiento_hasta)
         with self.assertRaises(ValidationError):
-            lim.actualizar_monto(Decimal("700.0000"))  # segundo antes de 24h: bloqueado
+            lim.aplicar_aumento_pendiente()
 
 
 class AutoExclusionTests(TestCase):

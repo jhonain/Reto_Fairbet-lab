@@ -1,18 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Perfil — FairBet Lab{% endblock %}
+{% block title %}Perfil - FairBet Lab{% endblock %}
 {% block content %}
 <h1>Mi perfil</h1>
-<ul class="datos">
-    <li>DNI: {{ perfil.dni }}</li>
-    <li>Estado KYC: <strong>{{ perfil.get_estado_kyc_display }}</strong></li>
-    <li>¿Puede apostar? {% if perfil.puede_apostar %}Sí{% else %}No{% endif %}</li>
-</ul>
+
+<section class="tarjeta">
+    <h2>Estado operativo</h2>
+    <ul class="datos">
+        <li>DNI: {{ perfil.dni }}</li>
+        <li>Estado KYC: <strong>{{ perfil.get_estado_kyc_display }}</strong></li>
+        <li>Puede apostar: {% if estado_operativo.puede_apostar %}Si{% else %}No{% endif %}</li>
+        <li>Motivo: {{ estado_operativo.motivo }}</li>
+    </ul>
+</section>
+
 {% if perfil.estado_kyc != "verificado" %}
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="accion" value="verificar_kyc">
-    <button type="submit" class="btn">Simular verificación KYC</button>
-    <p class="ayuda">En producción lo haría un operador; aquí es demo.</p>
+    <button type="submit" class="btn">Simular verificacion KYC</button>
+    <p class="ayuda">En produccion lo haria un operador; aqui es demo.</p>
 </form>
 {% endif %}
 {% endblock %}
