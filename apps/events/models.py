@@ -6,6 +6,10 @@ from .choices import EstadoEvento, TipoMercado, EstadoMercado, MotivoSuspension,
 from django.utils import timezone
 from datetime import timedelta
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 class Evento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -177,7 +181,6 @@ class Mercado(models.Model):
         self.suspendido_por = None
         self.save(update_fields=["estado", "suspendido_hasta", "motivo_suspension", "suspendido_por"])
 
-
 class Cuota(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     mercado = models.ForeignKey(
@@ -258,3 +261,42 @@ class HistorialCuota(models.Model):
         verbose_name = "Historial de cuota"
         verbose_name_plural = "Historiales de cuotas"
         ordering = ["-registrado_en"]
+
+@receiver(post_save, sender=Cuota)
+def notificar_cambio_cuota(sender, instance, **kwargs):
+    """Manda las nuevas odds al frontend en tiempo real"""
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        payload = {
+            "tipo_mensaje": "actualizacion_cuota",
+            "cuota_id": str(instance.id),
+            "seleccion": instance.seleccion,
+            "nuevo_valor": str(instance.valor),
+            "activa": instance.activa
+        }
+        async_to_sync(channel_layer.group_send)(
+            'broadcast_cuotas',
+            {
+                'type': 'enviar_actualizacion_cuota',
+                'payload': payload
+            }
+        )
+
+@receiver(post_save, sender=Mercado)
+def notificar_estado_mercado(sender, instance, **kwargs):
+    """Manda el estado del mercado (activo/suspendido) al frontend"""
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        payload = {
+            "tipo_mensaje": "estado_mercado",
+            "mercado_id": str(instance.id),
+            "evento_id": str(instance.evento.id),
+            "estado": instance.estado  # 'activo' o 'suspendido'
+        }
+        async_to_sync(channel_layer.group_send)(
+            'broadcast_cuotas',
+            {
+                'type': 'enviar_actualizacion_cuota',
+                'payload': payload
+            }
+        )

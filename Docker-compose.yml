@@ -41,5 +41,15 @@ services:
       #db:
         #condition: service_healthy
 
+  redis:
+    image: redis:7.4-alpine  # O la versión que esté usando tu equipo
+    container_name: fairbet_redis
+    ports:
+      - "6379:6379"
+    # 💡 Esto evita que Redis limpie los hilos pasivos que Daphne deja abiertos
+    command: redis-server --timeout 0 --tcp-keepalive 60
+    networks:
+      - default
+
 #volumes:
   #postgres_data:
