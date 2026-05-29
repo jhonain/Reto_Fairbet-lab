@@ -134,15 +134,31 @@ def wallet(request):
     return render(request, "portal/wallet.html", {"cuenta": cuenta})
 
 
+# =====================================================================
+# 🛠️ VISTA DE EVENTOS ADAPTADA PARA EL NIVEL 2 POR NORVIL
+# =====================================================================
 @login_required
 def eventos(request):
-    lista = Evento.objects.filter(estado=EstadoEvento.PROGRAMADO).order_by("inicia_en")
+    # ✅ Forzamos la consulta directa de todos los eventos para que cargue sí o sí
+    lista = Evento.objects.all().order_by("inicia_en").prefetch_related('mercados__cuotas')[:50]
+    
     eventos_data = []
+    
+    # 2. Mapeamos de forma jerárquica: Evento -> Mercados -> Cuotas (Soporte Multi-Mercado N2)
     for ev in lista:
-        m = ev.mercados.filter(tipo=TipoMercado.UNO_X_DOS).first()
-        cuotas = list(m.cuotas.filter(activa=True)) if m else []
-        eventos_data.append({"evento": ev, "cuotas": cuotas})
+        mercados_lista = []
+        for mer in ev.mercados.all():
+            mercados_lista.append({
+                "mercado": mer,
+                "cuotas": list(mer.cuotas.filter(activa=True))
+            })
+            
+        eventos_data.append({
+            "evento": ev, 
+            "mercados_con_cuotas": mercados_lista
+        })
 
+    # 3. Procesamiento seguro de apuestas mediante el formulario POST
     if request.method == "POST":
         cuota_id = request.POST.get("cuota_id")
         acepto = request.POST.get("acepto_juego_responsable")

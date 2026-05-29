@@ -20,13 +20,13 @@
 </div>
 
 {% if not eventos_data %}
-<p>No hay eventos. Ejecuta: <code>python manage.py seed_eventos</code></p>
+<p>No hay eventos. Ejecuta: <code>docker-compose run --rm -T web python manage.py seed_eventos</code></p>
 {% endif %} {% for item in eventos_data %}
 <article class="tarjeta evento">
   <h2>{{ item.evento.equipo_local }} vs {{ item.evento.equipo_visitante }}</h2>
   <p>Inicio: {{ item.evento.inicia_en|date:"d/m/Y H:i" }}</p>
 
-  {% if item.cuotas %}
+  {% if item.mercados_con_cuotas %}
   <form method="post" class="formulario form-apuesta">
     {% csrf_token %}
     <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
@@ -34,16 +34,28 @@
       <input type="checkbox" name="acepto_juego_responsable" required />
       Acepto el mensaje de consumo responsable
     </label>
-    <label
-      >Selección
-      <select name="cuota_id" required>
-        {% for c in item.cuotas %}
-        <option value="{{ c.id }}" id="cuota-${{ c.id }}" class="cuota-option">
-          {{ c.get_seleccion_display }} @ {{ c.valor }}
-        </option>
-        {% endfor %}
-      </select>
-    </label>
+
+    <div class="bloque-mercados" style="margin-top: 15px;">
+      {% for m_info in item.mercados_con_cuotas %}
+      <div class="mercado-contenedor" style="margin-bottom: 15px; border-left: 4px solid #2196f3; padding-left: 12px;">
+        <span style="display: block; font-weight: bold; font-size: 0.85rem; color: #555; text-transform: uppercase;">
+          {{ m_info.mercado.get_tipo_display|default:m_info.mercado.tipo }}
+        </span>
+        
+        <label style="display: block; margin-top: 5px;">
+          <select name="cuota_id" required style="width: 100%; padding: 5px;">
+            <option value="" disabled selected>Selecciona una opción...</option>
+            {% for c in m_info.cuotas %}
+            <option value="{{ c.id }}" id="cuota-{{ c.id }}" class="cuota-option">
+              {{ c.get_seleccion_display|default:c.seleccion }} @ {{ c.valor }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
     <label
       >Monto ({{ monto_min }} — {{ monto_max }} FIC)
       <input
@@ -66,7 +78,7 @@
     </button>
   </form>
   {% else %}
-  <p>Sin cuotas 1X2.</p>
+  <p>Este evento no tiene mercados activos actualmente.</p>
   {% endif %}
 </article>
 {% endfor %} {% endblock %} {% block extra_js %}
