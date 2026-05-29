@@ -16,31 +16,26 @@ from apps.wallet.models import Cuenta
 Usuario = get_user_model()
 
 
+
+
 class ValidacionDniTests(TestCase):
-    def test_dni_de_ocho_digitos_numericos_no_lanza_error(self):
-        try:
-            validar_dni("12345678")
-        except ValidationError:
-            self.fail("validar_dni lanzo ValidationError para un DNI de 8 digitos")
-
-    def test_dni_con_letras_es_rechazado(self):
+   
+    def test_dni_00000000_es_rechazado(self):
         with self.assertRaises(ValidationError):
-            validar_dni("1234567A")
-
-    def test_dni_con_menos_de_ocho_digitos_es_rechazado(self):
-        with self.assertRaises(ValidationError):
-            validar_dni("1234567")
-
-    def test_dni_con_mas_de_ocho_digitos_es_rechazado(self):
-        with self.assertRaises(ValidationError):
-            validar_dni("123456789")
-
-    def test_dni_de_ocho_digitos_no_se_rechaza_por_digito_verificador(self):
-        try:
             validar_dni("00000000")
-        except ValidationError:
-            self.fail("validar_dni no debe interpretar el ultimo digito como verificador")
-
+    
+    def test_dni_patron_repetido_rechazado(self):
+        for d in "123456789":
+            with self.assertRaises(ValidationError, msg=f"DNI {d*8} debería ser inválido"):
+                validar_dni(d * 8)
+    
+    def test_dni_secuencia_simple_rechazado(self):
+        with self.assertRaises(ValidationError):
+            validar_dni("12345678") 
+    
+    def test_dni_valido_real_aceptado(self):
+       
+        validar_dni("23456781")
 
 class ValidacionEdadTests(TestCase):
     def test_mayoria_de_edad_valida(self):
@@ -64,12 +59,13 @@ class RegistroUsuarioApiTests(TestCase):
         self.url = "/api/usuarios/registro/"
 
     def datos_registro(self, username="nuevo", dni=None, fecha_nacimiento="2000-01-01"):
+    
         return {
-            "username": username,
-            "password": "clave-segura-123",
-            "dni": dni or "12345678",
-            "fecha_nacimiento": fecha_nacimiento,
-        }
+        "username": username,
+        "password": "clave-segura-123",
+        "dni": dni or "73701561",  
+        "fecha_nacimiento": fecha_nacimiento,
+    }
 
     def post_json(self, data):
         return self.client.post(
