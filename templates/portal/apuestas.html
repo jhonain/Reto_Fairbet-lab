@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Mis apuestas — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Mis apuestas</h1>
+
+{% if not apuestas %}
+<p>Aún no tienes apuestas. Ve a <a href="{% url 'portal-eventos' %}">Eventos</a>.</p>
+{% endif %}
+
+<table class="tabla">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Stake</th>
+            <th>Cuota</th>
+            <th>Ganancia pot.</th>
+            <th>Payout</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in apuestas %}
+        <tr>
+            <td>{{ a.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            <td>{{ a.get_estado_display }}</td>
+            <td>{{ a.monto_apostado }}</td>
+            <td>{{ a.cuota_total }}</td>
+            <td>{{ a.ganancia_potencial }}</td>
+            <td>{{ a.ganancia_real|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
