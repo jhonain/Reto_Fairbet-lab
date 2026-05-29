@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,7 +10,7 @@ from apps.responsible_gaming.services import (
     monto_recargado_en_periodo,
     obtener_autoexclusion_vigente,
 )
-from .models import AutoExclusion, LimiteDeposito
+from .models import AutoExclusion, LimiteDeposito, SuspiciousActivity
 from .choices import TipoExclusion, PeriodoLimite
 
 
@@ -144,3 +144,50 @@ class MensajeJuegoResponsableView(APIView):
     def get(self, request):
         from apps.responsible_gaming.constants import MENSAJE_CONSUMO_RESPONSABLE
         return Response({"mensaje": MENSAJE_CONSUMO_RESPONSABLE})
+
+
+class AlertasSospechosasListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        estado = request.query_params.get("estado")
+        alertas = SuspiciousActivity.objects.all().order_by("-fecha_creacion")
+        if estado:
+            alertas = alertas.filter(estado=estado)
+
+        data = []
+        for a in alertas:
+            data.append({
+                "id": str(a.id),
+                "usuario": a.usuario.username if a.usuario else None,
+                "regla": a.regla,
+                "descripcion": a.descripcion,
+                "ip_address": a.ip_address,
+                "metadata": a.metadata,
+                "estado": a.estado,
+                "fecha_creacion": a.fecha_creacion.isoformat(),
+            })
+        return Response(data)
+
+
+class AlertaReviewView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, alerta_id):
+        try:
+            alerta = SuspiciousActivity.objects.get(pk=alerta_id)
+        except SuspiciousActivity.DoesNotExist:
+            return Response({"error": "Alerta no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        nuevo_estado = request.data.get("estado")
+        if nuevo_estado not in ("pendiente", "revisado", "descartado"):
+            return Response({"error": "Estado inválido. Opciones: pendiente, revisado, descartado"}, status=status.HTTP_400_BAD_REQUEST)
+
+        alerta.estado = nuevo_estado
+        alerta.save(update_fields=["estado"])
+
+        return Response({
+            "id": str(alerta.id),
+            "estado": alerta.estado,
+            "mensaje": f"Alerta marcada como {nuevo_estado}.",
+        })

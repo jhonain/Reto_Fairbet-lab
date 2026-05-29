@@ -1,0 +1,53 @@
+{% extends "operador/base_operador.html" %}
+{% block title %}Alertas — {{ block.super }}{% endblock %}
+{% block operador_content %}
+<h1>Alertas de actividad sospechosa</h1>
+
+<p class="ayuda">
+    Filtrar:
+    <a href="{% url 'operador-alertas' %}">Todas</a> |
+    <a href="{% url 'operador-alertas' %}?estado=pendiente">Pendientes</a> |
+    <a href="{% url 'operador-alertas' %}?estado=revisado">Revisadas</a> |
+    <a href="{% url 'operador-alertas' %}?estado=descartado">Descartadas</a>
+</p>
+
+{% if alertas %}
+<table class="tabla">
+    <tr>
+        <th>Fecha</th>
+        <th>Usuario</th>
+        <th>Regla</th>
+        <th>IP</th>
+        <th>Estado</th>
+        <th>Acción</th>
+    </tr>
+    {% for a in alertas %}
+    <tr>
+        <td>{{ a.fecha_creacion|date:"d/m/Y H:i" }}</td>
+        <td>{{ a.usuario.username|default:"—" }}</td>
+        <td>{{ a.regla }}</td>
+        <td>{{ a.ip_address|default:"—" }}</td>
+        <td>{{ a.estado }}</td>
+        <td>
+            {% if a.estado != 'descartado' %}
+            <form method="post" class="formulario inline">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="revisar_alerta">
+                <input type="hidden" name="alerta_id" value="{{ a.id }}">
+                <select name="estado">
+                    <option value="revisado" {% if a.estado == 'revisado' %}selected{% endif %}>Revisado</option>
+                    <option value="descartado" {% if a.estado == 'descartado' %}selected{% endif %}>Descartado</option>
+                </select>
+                <button type="submit" class="btn btn-sec">Actualizar</button>
+            </form>
+            {% else %}
+            <span class="ayuda">Descartada</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No hay alertas registradas.</p>
+{% endif %}
+{% endblock %}

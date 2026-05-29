@@ -31,7 +31,7 @@
             <label>Seleccion
                 <select name="cuota_id" required>
                     {% for c in item.cuotas %}
-                    <option value="{{ c.id }}">{{ c.get_seleccion_display }} @ {{ c.valor }}</option>
+                    <option value="{{ c.id }}">{{ c.get_seleccion_display }} - {{ c.valor }}</option>
                     {% endfor %}
                 </select>
             </label>

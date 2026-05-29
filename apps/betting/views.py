@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -64,9 +64,9 @@ class ApuestaSimpleView(APIView):
 
 
 class LiquidarApuestaView(APIView):
-    """Solo para demo/admin — en producción iría al panel del operador."""
+    """Liquidar apuesta (solo operador)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def post(self, request, apuesta_id):
         gano = request.data.get("gano")

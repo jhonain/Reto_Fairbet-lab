@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Operador — {{ block.super }}{% endblock %}
+{% block content %}
+<nav class="subnav">
+    <a href="{% url 'operador-dashboard' %}" class="btn btn-sec">Dashboard</a>
+    <a href="{% url 'operador-eventos' %}" class="btn btn-sec">Eventos</a>
+    <a href="{% url 'operador-apuestas' %}" class="btn btn-sec">Apuestas</a>
+    <a href="{% url 'operador-alertas' %}" class="btn btn-sec">Alertas</a>
+</nav>
+<hr>
+{% block operador_content %}{% endblock %}
+{% endblock %}

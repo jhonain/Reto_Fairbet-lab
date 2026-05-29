@@ -1,0 +1,101 @@
+{% extends "operador/base_operador.html" %}
+{% block title %}Eventos — {{ block.super }}{% endblock %}
+{% block operador_content %}
+<h1>Gestión de eventos</h1>
+
+<section class="tarjeta">
+    <h2>Crear evento</h2>
+    <form method="post" action="{% url 'operador-eventos' %}" class="formulario">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear">
+        <label>Nombre <input type="text" name="nombre" placeholder="Perú vs Chile" required></label>
+        <label>Local <input type="text" name="equipo_local" placeholder="Perú" required></label>
+        <label>Visitante <input type="text" name="equipo_visitante" placeholder="Chile" required></label>
+        <label>Inicio <input type="datetime-local" name="inicia_en" required></label>
+        <button type="submit" class="btn">Crear</button>
+    </form>
+</section>
+
+{% for evento in eventos %}
+<article class="tarjeta evento">
+    <h2>{{ evento.equipo_local }} vs {{ evento.equipo_visitante }}</h2>
+    <p><strong>Estado:</strong> {{ evento.estado }} | <strong>Inicio:</strong> {{ evento.inicia_en|date:"d/m/Y H:i" }}</p>
+    {% if evento.resultado %}
+    <p><strong>Resultado:</strong> {{ evento.resultado.local }} - {{ evento.resultado.visitante }}</p>
+    {% endif %}
+
+    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <form method="post" class="formulario inline">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="cambiar_estado">
+            <input type="hidden" name="evento_id" value="{{ evento.id }}">
+            <select name="estado">
+                <option value="programado" {% if evento.estado == 'programado' %}selected{% endif %}>Programado</option>
+                <option value="en_vivo" {% if evento.estado == 'en_vivo' %}selected{% endif %}>En vivo</option>
+                <option value="finalizado" {% if evento.estado == 'finalizado' %}selected{% endif %}>Finalizado</option>
+                <option value="suspendido" {% if evento.estado == 'suspendido' %}selected{% endif %}>Suspendido</option>
+                <option value="anulado" {% if evento.estado == 'anulado' %}selected{% endif %}>Anulado</option>
+            </select>
+            <button type="submit" class="btn btn-sec">Cambiar estado</button>
+        </form>
+
+        {% if evento.estado == 'finalizado' and not evento.resultado %}
+        <form method="post" class="formulario inline">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="marcar_resultado">
+            <input type="hidden" name="evento_id" value="{{ evento.id }}">
+            <input type="number" name="goles_local" placeholder="Goles local" min="0" style="width:80px;" required>
+            <input type="number" name="goles_visitante" placeholder="Goles visitante" min="0" style="width:100px;" required>
+            <button type="submit" class="btn">Marcar resultado</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% for mercado in evento.mercados.all %}
+    <div style="margin-top:0.5rem; padding:0.5rem; background:#f8fafc; border-radius:6px;">
+        <strong>{{ mercado.tipo }}</strong> — {{ mercado.estado }}
+        {% if mercado.suspendido_hasta %}
+        <span class="ayuda">(suspendido hasta {{ mercado.suspendido_hasta|date:"d/m/Y H:i" }})</span>
+        {% endif %}
+
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.25rem;">
+            <form method="post" class="formulario inline">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="suspender_mercado">
+                <input type="hidden" name="mercado_id" value="{{ mercado.id }}">
+                <input type="number" name="segundos" placeholder="segundos" style="width:80px;">
+                <button type="submit" class="btn btn-sec">Suspender</button>
+            </form>
+            <form method="post" class="formulario inline">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="reabrir_mercado">
+                <input type="hidden" name="mercado_id" value="{{ mercado.id }}">
+                <button type="submit" class="btn btn-sec">Reabrir</button>
+            </form>
+        </div>
+
+        <table class="tabla" style="margin-top:0.5rem;">
+            <tr><th>Selección</th><th>Cuota</th><th>Acción</th></tr>
+            {% for cuota in mercado.cuotas.all %}
+            <tr>
+                <td>{{ cuota.seleccion }}</td>
+                <td>{{ cuota.valor }}</td>
+                <td>
+                    <form method="post" class="formulario inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="actualizar_cuota">
+                        <input type="hidden" name="cuota_id" value="{{ cuota.id }}">
+                        <input type="number" name="valor" step="0.0001" value="{{ cuota.valor }}" style="width:90px;">
+                        <button type="submit" class="btn btn-sec">Actualizar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endfor %}
+</article>
+{% empty %}
+<p>No hay eventos registrados.</p>
+{% endfor %}
+{% endblock %}

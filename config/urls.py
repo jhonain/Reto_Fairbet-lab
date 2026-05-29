@@ -37,4 +37,6 @@ urlpatterns = [
     path('api/eventos/', include('apps.events.urls')),
     path('api/apuestas/', include('apps.betting.urls')),
     path('api/juego-responsable/', include('apps.responsible_gaming.urls')),
+    # Operador
+    path('api/operador/dashboard/', include('apps.dashboard.urls')),
 ]

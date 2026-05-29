@@ -16,6 +16,9 @@
                 <a href="{% url 'portal-wallet' %}">Billetera</a>
                 <a href="{% url 'portal-apuestas' %}">Mis apuestas</a>
                 <a href="{% url 'portal-responsable' %}">Juego responsable</a>
+                {% if user.is_staff %}
+                <a href="{% url 'operador-dashboard' %}" style="color:#fcd34d;">Panel operador</a>
+                {% endif %}
                 <a href="{% url 'portal-perfil' %}">{{ user.username }}</a>
                 <a href="{% url 'portal-logout' %}">Salir</a>
             {% else %}

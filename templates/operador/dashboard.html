@@ -1,0 +1,20 @@
+{% extends "operador/base_operador.html" %}
+{% block title %}Dashboard — {{ block.super }}{% endblock %}
+{% block operador_content %}
+<h1>Dashboard del operador</h1>
+
+<div class="tarjeta">
+    <ul class="datos">
+        <li><strong>GGR (hoy):</strong> {{ ggr }} FIC</li>
+        <li><strong>Exposure (apuestas activas):</strong> {{ exposure }} FIC</li>
+        <li><strong>Volumen apuestas (hoy):</strong> {{ volumen.cantidad }} apuestas — {{ volumen.monto_total }} FIC</li>
+        <li><strong>Apuestas hoy:</strong> {{ apuestas_hoy }}</li>
+        <li><strong>Usuarios activos (24h):</strong> {{ usuarios_activos_24h }}</li>
+        <li><strong>Total usuarios:</strong> {{ total_usuarios }}</li>
+        <li><strong>Alertas pendientes:</strong> {{ alertas_pendientes }}</li>
+        <li><strong>Actualizado:</strong> {{ fecha_actualizacion|date:"d/m/Y H:i:s" }}</li>
+    </ul>
+</div>
+
+<p><a href="{% url 'operador-reporte' %}" class="btn">Descargar reporte mensual CSV</a></p>
+{% endblock %}
