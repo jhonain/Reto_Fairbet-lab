@@ -99,9 +99,10 @@ if 'test' in sys.argv:
         }
     }
 else:
+    DB_ENGINE = config('DB_ENGINE', default='django.db.backends.sqlite3')
     DATABASES = {
         'default': {
-            'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+            'ENGINE': DB_ENGINE,
             'NAME': config('DB_NAME', default='db.sqlite3'),
             'USER': config('DB_USER', default=''),
             'PASSWORD': config('DB_PASSWORD', default=''),
@@ -109,6 +110,9 @@ else:
             'PORT': config('DB_PORT', default=''),
         }
     }
+    # Supabase exige SSL; solo aplica a PostgreSQL, nunca a sqlite
+    if 'postgresql' in DB_ENGINE:
+        DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
