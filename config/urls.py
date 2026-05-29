@@ -38,3 +38,8 @@ urlpatterns = [
     path('api/apuestas/', include('apps.betting.urls')),
     path('api/juego-responsable/', include('apps.responsible_gaming.urls')),
 ]
+
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

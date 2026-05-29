@@ -26,31 +26,36 @@ services:
       dockerfile: Dockerfile
     container_name: fairbet_web
     restart: unless-stopped
+    # 💡 CAMBIO: Usamos runserver para ver los estilos y agregamos el comando de superusuario
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py seed_sistema &&
              python manage.py seed_eventos &&
-             python manage.py runserver 0.0.0.0:8000"
+             python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); u = User.objects.get(username='admin'); u.is_staff = True; u.is_superuser = True; u.save()\" &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     env_file:
       - .env
+    # 💡 ESTO ES NUEVO: Credenciales para que NO te rebote el login
+    environment:
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_PASSWORD=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@fairbet.com
     depends_on:
       db:
         condition: service_healthy
 
   redis:
-    image: redis:7.4-alpine  # O la versión que esté usando tu equipo
+    image: redis:7.4-alpine
     container_name: fairbet_redis
     ports:
       - "6379:6379"
-    # 💡 Esto evita que Redis limpie los hilos pasivos que Daphne deja abiertos
     command: redis-server --timeout 0 --tcp-keepalive 60
     networks:
       - default
-
 
 volumes:
   postgres_data:

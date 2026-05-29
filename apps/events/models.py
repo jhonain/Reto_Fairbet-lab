@@ -10,7 +10,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-
+import threading
+import time
 
 class Evento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -98,19 +99,32 @@ class Evento(models.Model):
         return False
 
     def suspender_por_evento_critico(self, segundos=30):
-            """
-            Lógica del Nivel 2: Activa el momento crítico en el partido
-            y congela todos sus mercados asignados por un tiempo determinado.
-            """
-            ahora = timezone.now()
-            self.es_momento_critico = True
-            self.save(update_fields=['es_momento_critico'])
+        """
+        Lógica del Nivel 2 con control de hilos limpio.
+        """
+        # 💡 Si ya estaba en momento crítico, no lances otro hilo para no saturar Redis
+        if self.es_momento_critico:
+            return 
 
-            # Buscamos todos los mercados de este partido para suspenderlos en cascada
-            for mercado in self.mercados.all():
-                mercado.estado = "suspendido"
-                mercado.suspendido_hasta = ahora + timedelta(seconds=segundos)
-                mercado.save(update_fields=['estado', 'suspendido_hasta'])
+        ahora = timezone.now()
+        self.es_momento_critico = True
+        self.save(update_fields=['es_momento_critico'])
+
+        for mercado in self.mercados.all():
+            mercado.suspender(motivo="EVENTO_CRITICO", segundos=segundos)
+
+        def restaurar_mercados_despues_de_tiempo():
+            time.sleep(segundos)
+            self.refresh_from_db()
+            self.es_momento_critico = False
+            self.save(update_fields=['es_momento_critico'])
+            
+            for m in self.mercados.all():
+                m.reabrir()
+            print(f"⏱️ [TEMPORIZADOR] {segundos}s cumplidos. Mercado reactivado para: {self.nombre}")
+
+        hilo = threading.Thread(target=restaurar_mercados_despues_de_tiempo, daemon=True)
+        hilo.start()
 
 
 class Mercado(models.Model):
