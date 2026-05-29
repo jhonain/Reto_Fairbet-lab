@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Entrar — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Iniciar sesión</h1>
+<form method="post" class="formulario" autocomplete="on">
+    {% csrf_token %}
+    <label>Usuario <input type="text" name="username" required></label>
+    <label>Contraseña <input type="password" name="password" required></label>
+    <button type="submit" class="btn">Entrar</button>
+</form>
+<p>¿No tienes cuenta? <a href="{% url 'portal-registro' %}">Regístrate</a></p>
+{% endblock %}

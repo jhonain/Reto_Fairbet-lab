@@ -1,0 +1,47 @@
+{% extends "operador/base_operador.html" %}
+{% block title %}Apuestas — {{ block.super }}{% endblock %}
+{% block operador_content %}
+<h1>Liquidación de apuestas</h1>
+
+{% if apuestas %}
+<table class="tabla">
+    <tr>
+        <th>ID</th>
+        <th>Usuario</th>
+        <th>Monto</th>
+        <th>Cuota</th>
+        <th>Ganancia potencial</th>
+        <th>Estado</th>
+        <th>Acción</th>
+    </tr>
+    {% for a in apuestas %}
+    <tr>
+        <td>{{ a.id|truncatechars:8 }}</td>
+        <td>{{ a.usuario.username }}</td>
+        <td>{{ a.monto_apostado }} FIC</td>
+        <td>{{ a.cuota_total }}</td>
+        <td>{{ a.ganancia_potencial }} FIC</td>
+        <td>{{ a.estado }}</td>
+        <td>
+            {% if a.estado == 'aceptada' %}
+            <form method="post" class="formulario inline">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="liquidar">
+                <input type="hidden" name="apuesta_id" value="{{ a.id }}">
+                <select name="gano">
+                    <option value="true">Ganó</option>
+                    <option value="false">Perdió</option>
+                </select>
+                <button type="submit" class="btn">Liquidar</button>
+            </form>
+            {% else %}
+            <span class="ayuda">Liquidada</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No hay apuestas registradas.</p>
+{% endif %}
+{% endblock %}

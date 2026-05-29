@@ -1,0 +1,149 @@
+{% extends "base.html" %} {% block title %}Eventos — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Eventos disponibles</h1>
+
+<div id="alerta-momento-critico" class="alerta-global-roja" style="
+    display: none;
+    background-color: #d32f2f;
+    color: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 5px;
+  ">
+    ⚠️ MERCADOS TEMPORALMENTE SUSPENDIDOS POR REVISIÓN EN VIVO (VAR / GOL)
+</div>
+
+{% if not eventos_data %}
+<p>No hay eventos. Ejecuta: <code>docker-compose run --rm -T web python manage.py seed_eventos</code></p>
+{% endif %} {% for item in eventos_data %}
+<article class="tarjeta evento">
+    <h2>{{ item.evento.equipo_local }} vs {{ item.evento.equipo_visitante }}</h2>
+    <p>Inicio: {{ item.evento.inicia_en|date:"d/m/Y H:i" }}</p>
+
+    {% if item.mercados_con_cuotas %}
+    <form method="post" class="formulario form-apuesta">
+        {% csrf_token %}
+        <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
+        <label class="check">
+            <input type="checkbox" name="acepto_juego_responsable" required />
+            Acepto el mensaje de consumo responsable
+        </label>
+
+        <div class="bloque-mercados" style="margin-top: 15px;">
+            {% for m_info in item.mercados_con_cuotas %}
+            <div class="mercado-contenedor"
+                style="margin-bottom: 15px; border-left: 4px solid #2196f3; padding-left: 12px;">
+                <span
+                    style="display: block; font-weight: bold; font-size: 0.85rem; color: #555; text-transform: uppercase;">
+                    {{ m_info.mercado.get_tipo_display|default:m_info.mercado.tipo }}
+                </span>
+
+                <label style="display: block; margin-top: 5px;">
+                    <select name="cuota_id" required style="width: 100%; padding: 5px;">
+                        <option value="" disabled selected>Selecciona una opción...</option>
+                        {% for c in m_info.cuotas %}
+                        <option value="{{ c.id }}" id="cuota-{{ c.id }}" class="cuota-option">
+                            {{ c.get_seleccion_display|default:c.seleccion }} @ {{ c.valor }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+
+        <label>Monto ({{ monto_min }} — {{ monto_max }} FIC)
+            <input type="number" name="monto" step="0.01" min="{{ monto_min }}" max="{{ monto_max }}" value="10"
+                required />
+        </label>
+
+        <button type="submit" id="btn-confirmar-apuesta" class="btn btn-azul-original">
+            Confirmar apuesta
+        </button>
+    </form>
+    {% else %}
+    <p>Este evento no tiene mercados activos actualmente.</p>
+    {% endif %}
+</article>
+{% endfor %} {% endblock %} {% block extra_js %}
+<script>
+    const socketPath =
+        (window.location.protocol === "https:" ? "wss://" : "ws://") +
+        window.location.host +
+        "/ws/cuotas/";
+    const cuotasSocket = new WebSocket(socketPath);
+
+    cuotasSocket.onopen = function () {
+        console.log(
+            "[WebSocket] Túnel asíncrono establecido y escuchando de forma permanente.",
+        );
+    };
+
+    cuotasSocket.onmessage = function (e) {
+        const response = JSON.parse(e.data);
+        console.log("Mensaje de tiempo real recibido:", response);
+
+        // 💡 NORMALIZACIÓN DE PAYLOAD: Maneja el formato directo o anidado en .payload
+        let datos = response;
+        if (response.payload) {
+            datos = response.payload;
+        }
+
+        // ========================================================
+        // CASO A: Se actualizó un precio (Odds dinámicas)
+        // ========================================================
+        if (datos.tipo_mensaje === "actualizacion_cuota") {
+            const optionElement = document.getElementById(`cuota-${datos.cuota_id}`);
+            if (optionElement) {
+                optionElement.textContent = `${datos.seleccion} @ ${datos.nuevo_valor}`;
+                optionElement.style.color = "#2196f3";
+                setTimeout(() => {
+                    optionElement.style.color = "";
+                }, 2000);
+            }
+        }
+
+        // ========================================================
+        // CASO B: Suspensión automática por evento crítico (In-play)
+        // ========================================================
+        if (datos.tipo_mensaje === "estado_mercado") {
+            const btnApuesta = document.getElementById("btn-confirmar-apuesta");
+            const alertaVisual = document.getElementById("alerta-momento-critico");
+
+            if (datos.estado === "suspendido") {
+                // 1. Congelar el botón de apuesta
+                if (btnApuesta) {
+                    btnApuesta.disabled = true;
+                    btnApuesta.innerText = "🔒 MERCADO SUSPENDIDO";
+                    btnApuesta.style.backgroundColor = "#555555"; // Color Gris Bloqueado
+                    btnApuesta.style.cursor = "not-allowed";
+                }
+                // 2. Mostrar banner de aviso rojo superior
+                if (alertaVisual) {
+                    alertaVisual.style.display = "block";
+                }
+                console.log("🚫 Interfaz congelada por evento crítico.");
+            } else if (datos.estado === "abierto") {
+                // 3. Reactivación automática al terminar el hilo de 30s
+                if (btnApuesta) {
+                    btnApuesta.disabled = false;
+                    btnApuesta.innerText = "Confirmar apuesta";
+                    btnApuesta.style.backgroundColor = ""; // Limpia estilos y regresa al CSS original
+                    btnApuesta.style.cursor = "pointer";
+                }
+                // 4. Ocultar banner de alerta
+                if (alertaVisual) {
+                    alertaVisual.style.display = "none";
+                }
+                console.log("✅ Interfaz liberada automáticamente.");
+            }
+        }
+    };
+
+    cuotasSocket.onclose = function (e) {
+        console.error("El canal WebSocket ha pasado a modo pasivo de espera.");
+    };
+</script>
+{% endblock %}
