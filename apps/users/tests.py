@@ -16,39 +16,30 @@ from apps.wallet.models import Cuenta
 Usuario = get_user_model()
 
 
-def generar_dni_valido(base="1234567"):
-    factores = [3, 2, 7, 6, 5, 4, 3, 2]
-    suma = sum(int(base[i]) * factores[i] for i in range(7))
-    digito = 11 - (suma % 11)
-    if digito >= 10:
-        digito -= 10
-    return base + str(digito)
-
-
 class ValidacionDniTests(TestCase):
-    def test_dni_valido_no_lanza_error(self):
-        dni = generar_dni_valido()
-
+    def test_dni_de_ocho_digitos_numericos_no_lanza_error(self):
         try:
-            validar_dni(dni)
+            validar_dni("12345678")
         except ValidationError:
-            self.fail("validar_dni lanzo ValidationError para un DNI valido")
+            self.fail("validar_dni lanzo ValidationError para un DNI de 8 digitos")
 
-    def test_dni_invalido_por_longitud_o_caracteres(self):
-        casos_invalidos = ["1234567", "123456789", "1234567A"]
-
-        for dni in casos_invalidos:
-            with self.subTest(dni=dni):
-                with self.assertRaises(ValidationError):
-                    validar_dni(dni)
-
-    def test_dni_invalido_por_digito_verificador(self):
-        dni_valido = generar_dni_valido()
-        digito_incorrecto = "0" if dni_valido[-1] != "0" else "1"
-        dni_invalido = dni_valido[:7] + digito_incorrecto
-
+    def test_dni_con_letras_es_rechazado(self):
         with self.assertRaises(ValidationError):
-            validar_dni(dni_invalido)
+            validar_dni("1234567A")
+
+    def test_dni_con_menos_de_ocho_digitos_es_rechazado(self):
+        with self.assertRaises(ValidationError):
+            validar_dni("1234567")
+
+    def test_dni_con_mas_de_ocho_digitos_es_rechazado(self):
+        with self.assertRaises(ValidationError):
+            validar_dni("123456789")
+
+    def test_dni_de_ocho_digitos_no_se_rechaza_por_digito_verificador(self):
+        try:
+            validar_dni("00000000")
+        except ValidationError:
+            self.fail("validar_dni no debe interpretar el ultimo digito como verificador")
 
 
 class ValidacionEdadTests(TestCase):
@@ -76,7 +67,7 @@ class RegistroUsuarioApiTests(TestCase):
         return {
             "username": username,
             "password": "clave-segura-123",
-            "dni": dni or generar_dni_valido(),
+            "dni": dni or "12345678",
             "fecha_nacimiento": fecha_nacimiento,
         }
 
@@ -106,6 +97,16 @@ class RegistroUsuarioApiTests(TestCase):
 
     def test_registro_api_con_dni_invalido_devuelve_400(self):
         response = self.post_json(self.datos_registro(username="dni_mal", dni="1234567A"))
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_registro_api_con_dni_corto_devuelve_400(self):
+        response = self.post_json(self.datos_registro(username="dni_corto", dni="1234567"))
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_registro_api_con_dni_largo_devuelve_400(self):
+        response = self.post_json(self.datos_registro(username="dni_largo", dni="123456789"))
 
         self.assertEqual(response.status_code, 400)
 
@@ -142,7 +143,7 @@ class RegistroUsuarioWebTests(TestCase):
         return {
             "username": username,
             "password": "clave-segura-123",
-            "dni": dni or generar_dni_valido("7654321"),
+            "dni": dni or "87654321",
             "fecha_nacimiento": fecha_nacimiento,
         }
 
@@ -155,6 +156,24 @@ class RegistroUsuarioWebTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Usuario.objects.filter(username="dni_letras").exists())
         self.assertFalse(PerfilUsuario.objects.filter(usuario__username="dni_letras").exists())
+
+    def test_registro_web_con_dni_corto_no_crea_usuario(self):
+        response = self.client.post(
+            self.url,
+            data=self.datos_registro(username="dni_corto_web", dni="1234567"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Usuario.objects.filter(username="dni_corto_web").exists())
+
+    def test_registro_web_con_dni_largo_no_crea_usuario(self):
+        response = self.client.post(
+            self.url,
+            data=self.datos_registro(username="dni_largo_web", dni="123456789"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Usuario.objects.filter(username="dni_largo_web").exists())
 
     def test_registro_web_con_menor_de_edad_no_crea_usuario(self):
         menor_de_edad = date.today().replace(year=date.today().year - 17).isoformat()

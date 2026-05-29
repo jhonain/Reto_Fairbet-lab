@@ -201,4 +201,22 @@
 * Validé que el mensaje obligatorio se tome desde la constante existente.
 * Revisé que el mensaje sea visible antes de confirmar la apuesta.
 * Ejecuté verificaciones del proyecto.
+---
 
+### 2026-05-28 — Corrección de validación DNI en KYC simulado (Eduardo Puicon Paico)
+
+| Fecha | Parte del proyecto | Tipo de uso | Detalle |
+|-------|-------------------|-------------|---------|
+| 2026-05-28 | `apps/users/validators.py` | Revisar validación KYC | ChatGPT/Codex se usó como apoyo para identificar que la validación anterior podía rechazar DNI reales al interpretar incorrectamente el último dígito. Yo adapté la validación para aceptar 8 dígitos numéricos y mantener el bloqueo de letras. |
+| 2026-05-28 | `apps/users/tests.py` | Revisar cobertura | ChatGPT/Codex se usó como apoyo para actualizar las pruebas que dependían del dígito verificador y cubrir DNI válido, letras, longitud inválida, registro web, registro API y menor de edad. Yo validé que las pruebas reflejen la regla corregida. |
+| 2026-05-28 | `templates/portal/registro.html` | Mejorar ayuda visual | ChatGPT/Codex se usó como apoyo para mantener restricciones visuales en el campo DNI. Yo validé que la seguridad principal siga en backend. |
+| 2026-05-28 | `docs/adr/0007-validacion-dni-kyc-simulado.md` | Redactar decisión técnica | ChatGPT/Codex se usó como apoyo para estructurar el ADR según la plantilla del reto. Yo ajusté el contenido a la decisión realmente tomada. |
+
+## Lo que hice yo en esta fase
+
+* Probé el registro con un DNI real desde la interfaz.
+* Detecté que la validación anterior generaba falsos negativos.
+* Ajusté la regla para aceptar DNI de 8 dígitos numéricos.
+* Revisé que el sistema siga rechazando letras y formatos inválidos.
+* Ejecuté verificaciones del proyecto.
+* Revisé que la documentación refleje solo lo implementado.
