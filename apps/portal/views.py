@@ -1,4 +1,5 @@
 import csv
+import json
 import uuid
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
@@ -16,7 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from apps.betting.models import Apuesta
 from apps.betting.choices import EstadoApuesta
-from apps.betting.services import MONTO_MAXIMO, MONTO_MINIMO, crear_apuesta_simple, liquidar_apuesta
+from apps.betting.services import MONTO_MAXIMO, MONTO_MINIMO, crear_apuesta_simple, crear_apuesta_combinada, liquidar_apuesta
 from apps.events.choices import EstadoEvento, TipoMercado, EstadoMercado, MotivoSuspension, CodigoSeleccion
 from apps.events.models import Evento, Mercado, Cuota, HistorialCuota
 from apps.responsible_gaming.choices import PeriodoLimite, TipoExclusion
@@ -170,16 +171,19 @@ def eventos(request):
     lista = Evento.objects.filter(estado=EstadoEvento.PROGRAMADO).order_by("inicia_en")
     eventos_data = []
     for ev in lista:
-        mercado = ev.mercados.filter(tipo=TipoMercado.UNO_X_DOS).first()
-        cuotas = list(mercado.cuotas.filter(activa=True)) if mercado else []
-        eventos_data.append({"evento": ev, "cuotas": cuotas})
+        mercados_con_cuotas = []
+        for m in ev.mercados.filter(estado=EstadoMercado.ABIERTO).prefetch_related("cuotas"):
+            cuotas_activas = list(m.cuotas.filter(activa=True))
+            if cuotas_activas:
+                mercados_con_cuotas.append({"mercado": m, "cuotas": cuotas_activas})
+        eventos_data.append({"evento": ev, "mercados_con_cuotas": mercados_con_cuotas})
 
     if request.method == "POST":
         if not estado_operativo["puede_apostar"]:
             messages.error(request, estado_operativo["motivo"])
             return redirect("portal-eventos")
 
-        cuota_id = request.POST.get("cuota_id")
+        tipo = request.POST.get("tipo_apuesta", "simple")
         acepto = request.POST.get("acepto_juego_responsable")
         clave = request.POST.get("clave_idempotencia") or str(uuid.uuid4())
 
@@ -194,19 +198,23 @@ def eventos(request):
             return redirect("portal-eventos")
 
         try:
-            apuesta = crear_apuesta_simple(
-                request.user,
-                cuota_id,
-                monto,
-                clave,
-                True,
-            )
+            if tipo == "combinada":
+                raw = request.POST.get("selecciones_json", "[]")
+                selecciones = json.loads(raw)
+                apuesta = crear_apuesta_combinada(
+                    request.user, selecciones, monto, clave, True,
+                )
+            else:
+                cuota_id = request.POST.get("cuota_id")
+                apuesta = crear_apuesta_simple(
+                    request.user, cuota_id, monto, clave, True,
+                )
             messages.success(
                 request,
-                f"Apuesta aceptada. Ganancia potencial: {apuesta.ganancia_potencial} FIC",
+                f"Apuesta {'combinada' if tipo == 'combinada' else 'simple'} aceptada. Ganancia potencial: {apuesta.ganancia_potencial} FIC",
             )
             return redirect("portal-apuestas")
-        except ValidationError as e:
+        except (ValidationError, json.JSONDecodeError) as e:
             messages.error(request, str(e))
 
     return render(request, "portal/eventos.html", {

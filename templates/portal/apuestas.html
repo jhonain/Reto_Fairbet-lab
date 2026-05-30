@@ -11,22 +11,34 @@
     <thead>
         <tr>
             <th>Fecha</th>
+            <th>Tipo</th>
             <th>Estado</th>
             <th>Stake</th>
             <th>Cuota</th>
             <th>Ganancia pot.</th>
             <th>Payout</th>
+            <th>Cash Out</th>
         </tr>
     </thead>
     <tbody>
         {% for a in apuestas %}
         <tr>
             <td>{{ a.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            <td>{{ a.get_tipo_display }}</td>
             <td>{{ a.get_estado_display }}</td>
             <td>{{ a.monto_apostado }}</td>
             <td>{{ a.cuota_total }}</td>
             <td>{{ a.ganancia_potencial }}</td>
             <td>{{ a.ganancia_real|default:"—" }}</td>
+            <td>
+                {% if a.estado == "aceptada" %}
+                <a href="{% url 'cash-out-preview' a.id %}" class="btn btn-sm">Cash Out</a>
+                {% elif a.estado == "cash_out" %}
+                {{ a.monto_cash_out|default:"—" }}
+                {% else %}
+                —
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

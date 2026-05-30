@@ -227,7 +227,7 @@ class Cuota(models.Model):
         unique_together = [["mercado", "seleccion"]]
 
     def __str__(self):
-        return f"{self.seleccion} @ {self.valor}"
+        return f"{self.seleccion} - {self.valor}"
 
     def liquidar(self, es_ganadora):
         """Marcar esta cuota como ganadora o perdedora."""
@@ -265,7 +265,10 @@ class HistorialCuota(models.Model):
 @receiver(post_save, sender=Cuota)
 def notificar_cambio_cuota(sender, instance, **kwargs):
     """Manda las nuevas odds al frontend en tiempo real"""
-    channel_layer = get_channel_layer()
+    try:
+        channel_layer = get_channel_layer()
+    except Exception:
+        channel_layer = None
     if channel_layer:
         payload = {
             "tipo_mensaje": "actualizacion_cuota",
@@ -274,18 +277,24 @@ def notificar_cambio_cuota(sender, instance, **kwargs):
             "nuevo_valor": str(instance.valor),
             "activa": instance.activa
         }
-        async_to_sync(channel_layer.group_send)(
-            'broadcast_cuotas',
-            {
-                'type': 'enviar_actualizacion_cuota',
-                'payload': payload
-            }
-        )
+        try:
+            async_to_sync(channel_layer.group_send)(
+                'broadcast_cuotas',
+                {
+                    'type': 'enviar_actualizacion_cuota',
+                    'payload': payload
+                }
+            )
+        except Exception:
+            pass  # Redis no disponible (tests o local)
 
 @receiver(post_save, sender=Mercado)
 def notificar_estado_mercado(sender, instance, **kwargs):
     """Manda el estado del mercado (activo/suspendido) al frontend"""
-    channel_layer = get_channel_layer()
+    try:
+        channel_layer = get_channel_layer()
+    except Exception:
+        channel_layer = None
     if channel_layer:
         payload = {
             "tipo_mensaje": "estado_mercado",
@@ -293,10 +302,13 @@ def notificar_estado_mercado(sender, instance, **kwargs):
             "evento_id": str(instance.evento.id),
             "estado": instance.estado  # 'activo' o 'suspendido'
         }
-        async_to_sync(channel_layer.group_send)(
-            'broadcast_cuotas',
-            {
-                'type': 'enviar_actualizacion_cuota',
-                'payload': payload
-            }
-        )
+        try:
+            async_to_sync(channel_layer.group_send)(
+                'broadcast_cuotas',
+                {
+                    'type': 'enviar_actualizacion_cuota',
+                    'payload': payload
+                }
+            )
+        except Exception:
+            pass  # Redis no disponible (tests o local)

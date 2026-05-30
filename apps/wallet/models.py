@@ -296,6 +296,42 @@ class ServicioBilletera:
 
     @staticmethod
     @transaction.atomic
+    def ejecutar_cash_out(usuario, stake: Decimal, monto_cash_out: Decimal, id_apuesta: uuid.UUID, clave_idempotencia: uuid.UUID):
+        if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
+            return
+
+        cuenta_usuario = Cuenta.objects.select_for_update().get(
+            usuario=usuario, tipo_cuenta=TipoCuenta.BILLETERA_USUARIO
+        )
+        cuenta_pendientes = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.APUESTAS_PENDIENTES, usuario__isnull=True
+        )
+        cuenta_casa = Cuenta.objects.select_for_update().get(
+            tipo_cuenta=TipoCuenta.CASA, usuario__isnull=True
+        )
+
+        AsientoContable.objects.create(
+            cuenta=cuenta_pendientes, monto=stake, direccion=DireccionAsiento.DEBITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.CASH_OUT, id_referencia=id_apuesta,
+        )
+        AsientoContable.objects.create(
+            cuenta=cuenta_usuario, monto=monto_cash_out, direccion=DireccionAsiento.CREDITO,
+            id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.CASH_OUT, id_referencia=id_apuesta,
+        )
+        diferencia = stake - monto_cash_out
+        if diferencia > 0:
+            AsientoContable.objects.create(
+                cuenta=cuenta_casa, monto=diferencia, direccion=DireccionAsiento.CREDITO,
+                id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.CASH_OUT, id_referencia=id_apuesta,
+            )
+        elif diferencia < 0:
+            AsientoContable.objects.create(
+                cuenta=cuenta_casa, monto=abs(diferencia), direccion=DireccionAsiento.DEBITO,
+                id_transaccion=clave_idempotencia, tipo_asiento=TipoAsiento.CASH_OUT, id_referencia=id_apuesta,
+            )
+
+    @staticmethod
+    @transaction.atomic
     def transferir(origen, destino_username: str, monto: Decimal, clave_idempotencia: uuid.UUID):
         if AsientoContable.objects.filter(id_transaccion=clave_idempotencia).exists():
             return
