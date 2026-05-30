@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Apuestas — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Apuestas</h1>
+
+<section class="tarjeta">
+    <h2>Últimas apuestas</h2>
+    {% if not apuestas %}
+    <p>Todavía no hay apuestas.</p>
+    {% else %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Monto</th>
+                <th>Cuota</th>
+                <th>Ganancia potencial</th>
+                <th>Fecha</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in apuestas %}
+            <tr>
+                <td>{{ a.usuario.username }}</td>
+                <td>{{ a.get_tipo_display }}</td>
+                <td>{{ a.get_estado_display }}</td>
+                <td>{{ a.monto_apostado }} FIC</td>
+                <td>{{ a.cuota_total }}</td>
+                <td>{{ a.ganancia_potencial }} FIC</td>
+                <td>{{ a.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if a.estado == "aceptada" %}
+                    <form method="post" style="display:inline-block;">
+                        {% csrf_token %}
+                        <input type="hidden" name="apuesta_id" value="{{ a.id }}" />
+                        <button type="submit" name="accion" value="liquidar_ganada" class="btn">Ganada</button>
+                        <button type="submit" name="accion" value="liquidar_perdida" class="btn btn-sec">Perdida</button>
+                    </form>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endblock %}

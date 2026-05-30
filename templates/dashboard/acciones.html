@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Acciones del operador — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Acciones del operador</h1>
+<p>Lanza acciones sobre un evento sin entrar al panel de admin de Django.</p>
+
+<section class="tarjeta">
+    <h2>Ejecutar acción</h2>
+
+    {% if not eventos %}
+    <p>No hay eventos. Crea uno en la pestaña <strong>Eventos</strong>.</p>
+    {% else %}
+    <form method="post" class="formulario"
+        onsubmit="return confirm('¿Seguro que deseas ejecutar esta acción?');">
+        {% csrf_token %}
+
+        <label>Evento
+            <select name="evento_id" required style="width: 100%; padding: 6px;">
+                <option value="" disabled selected>Selecciona un evento...</option>
+                {% for ev in eventos %}
+                <option value="{{ ev.id }}">
+                    {{ ev.equipo_local }} vs {{ ev.equipo_visitante }}
+                    ({{ ev.get_estado_display }})
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Acción
+            <select name="accion" required style="width: 100%; padding: 6px;">
+                <option value="" disabled selected>Selecciona una acción...</option>
+                <option value="simular_critico">Simular evento crítico (30s)</option>
+                <option value="estado_programado">Marcar como programado</option>
+                <option value="estado_en_vivo">Marcar como en vivo</option>
+                <option value="estado_finalizado">Marcar como finalizado</option>
+                <option value="estado_suspendido">Suspender evento</option>
+                <option value="estado_anulado">Anular evento</option>
+                <option value="eliminar">Eliminar evento</option>
+            </select>
+        </label>
+
+        <button type="submit" class="btn">ACCIONES</button>
+    </form>
+    {% endif %}
+</section>
+
+<section class="tarjeta">
+    <h2>¿Qué hace cada acción?</h2>
+    <ul style="font-size: 0.95rem; line-height: 1.6;">
+        <li><strong>Simular evento crítico:</strong> suspende los mercados 30 segundos (como un gol o VAR).</li>
+        <li><strong>Cambiar estado:</strong> programado, en vivo, finalizado, suspendido o anulado.</li>
+        <li><strong>Eliminar evento:</strong> borra el evento si no tiene apuestas asociadas.</li>
+    </ul>
+</section>
+{% endblock %}

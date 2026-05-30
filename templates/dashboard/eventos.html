@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Gestión de eventos — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Gestión de eventos</h1>
+
+<section class="tarjeta">
+    <h2>Crear evento</h2>
+    <form method="post" class="formulario">
+        {% csrf_token %}
+        <label>Nombre
+            <input type="text" name="nombre" placeholder="Perú vs Chile" />
+        </label>
+        <label>Local
+            <input type="text" name="equipo_local" required />
+        </label>
+        <label>Visitante
+            <input type="text" name="equipo_visitante" required />
+        </label>
+        <label>Fecha y hora de inicio
+            <input type="datetime-local" name="inicia_en" required />
+        </label>
+        <button type="submit" class="btn">Crear evento</button>
+    </form>
+    <p style="font-size: 0.85rem; color: #555;">
+        Al crear el evento se generan automáticamente los mercados 1X2, Over/Under 2.5 y Ambos anotan.
+    </p>
+</section>
+
+<section class="tarjeta">
+    <h2>Eventos registrados</h2>
+    {% if not eventos %}
+    <p>Todavía no hay eventos.</p>
+    {% else %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Evento</th>
+                <th>Inicio</th>
+                <th>Estado</th>
+                <th>Mercados</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in eventos %}
+            <tr>
+                <td>{{ ev.equipo_local }} vs {{ ev.equipo_visitante }}</td>
+                <td>{{ ev.inicia_en|date:"d/m/Y H:i" }}</td>
+                <td>{{ ev.get_estado_display }}</td>
+                <td>{{ ev.mercados.count }}</td>
+                <td>
+                    <a class="btn btn-sec" href="{% url 'dashboard-evento-detalle' ev.id %}">Gestionar mercados</a>
+                    <form method="post" style="display:inline-block; margin-top:5px;"
+                        onsubmit="return confirm('¿Seguro que deseas ejecutar esta acción?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="evento_id" value="{{ ev.id }}" />
+                        {% include "dashboard/_acciones_evento.html" %}
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endblock %}

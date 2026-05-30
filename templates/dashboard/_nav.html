@@ -1,0 +1,10 @@
+{% with actual=request.resolver_match.url_name %}
+<nav class="nav-operador" style="margin-bottom: 1.25rem;">
+    <a class="btn {% if actual != 'dashboard-panel' %}btn-sec{% endif %}" href="{% url 'dashboard-panel' %}">Dashboard</a>
+    <a class="btn {% if actual != 'dashboard-eventos' %}btn-sec{% endif %}" href="{% url 'dashboard-eventos' %}">Eventos</a>
+    <a class="btn {% if actual != 'dashboard-apuestas' %}btn-sec{% endif %}" href="{% url 'dashboard-apuestas' %}">Apuestas</a>
+    <a class="btn {% if actual != 'dashboard-limites' %}btn-sec{% endif %}" href="{% url 'dashboard-limites' %}">Limites</a>
+    <a class="btn {% if actual != 'dashboard-alertas' %}btn-sec{% endif %}" href="{% url 'dashboard-alertas' %}">Alertas</a>
+    <a class="btn {% if actual != 'dashboard-acciones' %}btn-sec{% endif %}" href="{% url 'dashboard-acciones' %}">ACCIONES</a>
+</nav>
+{% endwith %}

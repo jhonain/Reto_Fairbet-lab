@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Apuesta combinada — FairBet Lab{% endblock %}
+{% block content %}
+<h1>Apuesta combinada</h1>
+<p>Elige una selección de <strong>dos o más eventos distintos</strong>. La combinada solo gana si aciertas todas (todo-o-nada); la cuota total es el producto de las cuotas.</p>
+
+{% if not estado_operativo.puede_apostar %}
+<section class="tarjeta alerta-jr">
+    <h2>Cuenta no habilitada para apostar</h2>
+    <p>{{ estado_operativo.motivo }}</p>
+</section>
+{% endif %}
+
+<form method="post" class="formulario">
+    {% csrf_token %}
+    {% for item in eventos_data %}
+    <article class="tarjeta evento">
+        <h2>{{ item.evento.equipo_local }} vs {{ item.evento.equipo_visitante }}</h2>
+        <p>Inicio: {{ item.evento.inicia_en|date:"d/m/Y H:i" }}</p>
+        {% for c in item.cuotas %}
+        <label class="check">
+            <input type="checkbox" name="cuota_ids" value="{{ c.id }}">
+            {{ c.get_seleccion_display }} - {{ c.valor }}
+        </label>
+        {% empty %}
+        <p>Sin cuotas 1X2.</p>
+        {% endfor %}
+    </article>
+    {% endfor %}
+
+    <div class="tarjeta">
+        <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
+        <label class="check">
+            <input type="checkbox" name="acepto_juego_responsable" required>
+            Acepto el mensaje de consumo responsable
+        </label>
+        <label>Monto ({{ monto_min }} - {{ monto_max }} FIC)
+            <input type="number" name="monto" step="0.01" min="{{ monto_min }}" max="{{ monto_max }}" value="10" required>
+        </label>
+        {% if estado_operativo.puede_apostar %}
+        <button type="submit" class="btn">Confirmar combinada</button>
+        {% else %}
+        <button type="button" class="btn" disabled>Confirmar combinada</button>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

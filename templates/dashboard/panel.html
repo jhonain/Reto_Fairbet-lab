@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Panel del operador — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Panel del operador</h1>
+
+<section class="tarjetas-metricas">
+    <article class="tarjeta">
+        <h3>GGR (ingreso bruto)</h3>
+        <p class="metrica">{{ ggr }} FIC</p>
+    </article>
+    <article class="tarjeta">
+        <h3>Exposición (apuestas abiertas)</h3>
+        <p class="metrica">{{ exposicion }} FIC</p>
+    </article>
+    <article class="tarjeta">
+        <h3>Volumen total</h3>
+        <p class="metrica">{{ volumen_total }}</p>
+    </article>
+    <article class="tarjeta">
+        <h3>Apuestas pendientes</h3>
+        <p class="metrica">{{ volumen_pendiente }}</p>
+    </article>
+    <article class="tarjeta">
+        <h3>Usuarios activos</h3>
+        <p class="metrica">{{ usuarios_activos }}</p>
+    </article>
+</section>
+
+<section class="tarjeta">
+    <h2>Integridad de auditoría</h2>
+    {% if integridad_ok %}
+    <p class="msg-success">{{ integridad_msg }}</p>
+    {% else %}
+    <p class="msg-error">{{ integridad_msg }}</p>
+    {% endif %}
+</section>
+
+<section class="tarjeta">
+    <h2>Reporte</h2>
+    <p><a class="btn" href="{% url 'dashboard-reporte-csv' %}">Descargar reporte CSV (MINCETUR)</a></p>
+</section>
+
+<section class="tarjeta">
+    <h2>Alertas anti-fraude pendientes</h2>
+    {% if not alertas %}
+    <p>No hay alertas pendientes.</p>
+    {% else %}
+    <table class="tabla">
+        <thead>
+            <tr><th>Regla</th><th>Descripción</th><th>IP</th><th>Fecha</th></tr>
+        </thead>
+        <tbody>
+            {% for al in alertas %}
+            <tr>
+                <td>{{ al.regla }}</td>
+                <td>{{ al.descripcion }}</td>
+                <td>{{ al.ip_address|default:"—" }}</td>
+                <td>{{ al.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endblock %}

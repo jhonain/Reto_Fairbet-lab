@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Límites de recarga — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Límites de recarga pendientes</h1>
+<p>Aquí el operador valida los aumentos de límite que el usuario pidió en Juego responsable.</p>
+
+<section class="tarjeta">
+    <h2>Aumentos en espera</h2>
+    {% if not limites_pendientes %}
+    <p>No hay aumentos pendientes por validar.</p>
+    {% else %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Periodo</th>
+                <th>Límite actual</th>
+                <th>Usado</th>
+                <th>Aumento pendiente</th>
+                <th>Disponible desde</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in limites_pendientes %}
+            <tr>
+                <td>{{ item.limite.usuario.username }}</td>
+                <td>{{ item.limite.get_periodo_display }}</td>
+                <td>{{ item.limite.monto }} FIC</td>
+                <td>{{ item.usado }} FIC</td>
+                <td>{{ item.limite.monto_pendiente }} FIC</td>
+                <td>
+                    {% if item.limite.pendiente_aplicable_desde %}
+                    {{ item.limite.pendiente_aplicable_desde|date:"d/m/Y H:i" }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.puede_aplicar %}
+                    <span style="font-size:0.85rem;color:#2e7d32;">Listo para validar</span>
+                    {% else %}
+                    <span style="font-size:0.85rem;color:#555;">En espera</span>
+                    {% endif %}
+                    <form method="post" style="margin-top:5px;">
+                        {% csrf_token %}
+                        <input type="hidden" name="limite_id" value="{{ item.limite.id }}" />
+                        <button type="submit" name="accion" value="validar_aumento" class="btn">Validar aumento</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endblock %}
