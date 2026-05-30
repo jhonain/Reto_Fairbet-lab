@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Mis apuestas</h1>
 
-{% if not apuestas %}
+{% if not apuestas_data %}
 <p>Aún no tienes apuestas. Ve a <a href="{% url 'portal-eventos' %}">Eventos</a>.</p>
 {% endif %}
 
@@ -11,22 +11,37 @@
     <thead>
         <tr>
             <th>Fecha</th>
+            <th>Tipo</th>
             <th>Estado</th>
             <th>Stake</th>
             <th>Cuota</th>
             <th>Ganancia pot.</th>
             <th>Payout</th>
+            <th>Cash-out</th>
         </tr>
     </thead>
     <tbody>
-        {% for a in apuestas %}
+        {% for item in apuestas_data %}
         <tr>
-            <td>{{ a.fecha_creacion|date:"d/m/Y H:i" }}</td>
-            <td>{{ a.get_estado_display }}</td>
-            <td>{{ a.monto_apostado }}</td>
-            <td>{{ a.cuota_total }}</td>
-            <td>{{ a.ganancia_potencial }}</td>
-            <td>{{ a.ganancia_real|default:"—" }}</td>
+            <td>{{ item.apuesta.fecha_creacion|date:"d/m/Y H:i" }}</td>
+            <td>{{ item.apuesta.get_tipo_display }}</td>
+            <td>{{ item.apuesta.get_estado_display }}</td>
+            <td>{{ item.apuesta.monto_apostado }}</td>
+            <td>{{ item.apuesta.cuota_total }}</td>
+            <td>{{ item.apuesta.ganancia_potencial }}</td>
+            <td>{{ item.apuesta.ganancia_real|default:"—" }}</td>
+            <td>
+                {% if item.cash_out_estimado %}
+                <form method="post" class="form-cashout">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cash_out">
+                    <input type="hidden" name="apuesta_id" value="{{ item.apuesta.id }}">
+                    <button type="submit" class="btn">Cerrar por {{ item.cash_out_estimado }} FIC</button>
+                </form>
+                {% else %}
+                —
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

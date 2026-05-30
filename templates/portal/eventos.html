@@ -1,52 +1,123 @@
-{% extends "base.html" %}
-{% block title %}Eventos - FairBet Lab{% endblock %}
+{% extends "base.html" %} {% block title %}Eventos — FairBet Lab{% endblock %}
 {% block content %}
 <h1>Eventos disponibles</h1>
 
-{% if not estado_operativo.puede_apostar %}
-<section class="tarjeta alerta-jr">
-    <h2>Cuenta no habilitada para apostar</h2>
-    <p>{{ estado_operativo.motivo }}</p>
-</section>
-{% endif %}
+<div id="alerta-momento-critico" class="alerta-global-roja" style="
+    display: none;
+    background-color: #d32f2f;
+    color: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 5px;
+  ">
+    ⚠️ MERCADOS TEMPORALMENTE SUSPENDIDOS POR REVISIÓN EN VIVO (VAR / GOL)
+</div>
 
 {% if not eventos_data %}
-<p>No hay eventos. Ejecuta: <code>python manage.py seed_eventos</code></p>
-{% endif %}
-
-{% for item in eventos_data %}
-<article class="tarjeta evento">
+<p>No hay eventos. Ejecuta: <code>docker-compose run --rm -T web python manage.py seed_eventos</code></p>
+{% endif %} {% for item in eventos_data %}
+<article class="tarjeta evento" id="evento-{{ item.evento.id }}">
     <h2>{{ item.evento.equipo_local }} vs {{ item.evento.equipo_visitante }}</h2>
     <p>Inicio: {{ item.evento.inicia_en|date:"d/m/Y H:i" }}</p>
 
-    {% if item.cuotas %}
-        {% if estado_operativo.puede_apostar %}
-        <form method="post" class="formulario form-apuesta">
-            {% csrf_token %}
-            <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
-            <label class="check">
-                <input type="checkbox" name="acepto_juego_responsable" required>
-                Acepto el mensaje de consumo responsable
-            </label>
-            <label>Seleccion
-                <select name="cuota_id" required>
-                    {% for c in item.cuotas %}
-                    <option value="{{ c.id }}">{{ c.get_seleccion_display }} @ {{ c.valor }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Monto ({{ monto_min }} - {{ monto_max }} FIC)
-                <input type="number" name="monto" step="0.01" min="{{ monto_min }}" max="{{ monto_max }}" value="10" required>
-            </label>
-            <button type="submit" class="btn">Confirmar apuesta</button>
-        </form>
-        {% else %}
+    <div class="banner-suspendido" style="display:none; background-color:#d32f2f; color:white; padding:10px; margin:10px 0; text-align:center; font-weight:bold; border-radius:5px;">
+        🔒 MERCADO SUSPENDIDO POR REVISIÓN EN VIVO (VAR / GOL)
+    </div>
+
+    {% if item.mercados_con_cuotas %}
+    <form method="post" class="formulario form-apuesta">
+        {% csrf_token %}
         <p class="alerta-jr">{{ mensaje_juego_responsable }}</p>
-        <button type="button" class="btn" disabled>Confirmar apuesta</button>
-        {% endif %}
+        <label class="check">
+            <input type="checkbox" name="acepto_juego_responsable" required />
+            Acepto el mensaje de consumo responsable
+        </label>
+
+        <label style="display: block; margin-top: 15px;">Elige tu apuesta:
+            <select name="cuota_id" required style="width: 100%; padding: 6px;">
+                <option value="" disabled selected>Selecciona una opción...</option>
+                {% for m_info in item.mercados_con_cuotas %}
+                <optgroup label="{{ m_info.mercado.get_tipo_display|default:m_info.mercado.tipo }}">
+                    {% for c in m_info.cuotas %}
+                    <option value="{{ c.id }}" id="cuota-{{ c.id }}" class="cuota-option">
+                        {{ c.get_seleccion_display|default:c.seleccion }} - {{ c.valor }}
+                    </option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Monto ({{ monto_min }} — {{ monto_max }} FIC)
+            <input type="number" name="monto" step="0.01" min="{{ monto_min }}" max="{{ monto_max }}" value="10"
+                required />
+        </label>
+
+        <button type="submit" id="btn-confirmar-apuesta" class="btn btn-azul-original">
+            Confirmar apuesta
+        </button>
+    </form>
     {% else %}
-    <p>Sin cuotas 1X2.</p>
+    <p>Este evento no tiene mercados activos actualmente.</p>
     {% endif %}
 </article>
-{% endfor %}
+{% endfor %} {% endblock %} {% block extra_js %}
+<script>
+    const socketPath =
+        (window.location.protocol === "https:" ? "wss://" : "ws://") +
+        window.location.host +
+        "/ws/cuotas/";
+    const cuotasSocket = new WebSocket(socketPath);
+
+    cuotasSocket.onmessage = function (e) {
+        const response = JSON.parse(e.data);
+        let datos = response;
+        if (response.payload) {
+            datos = response.payload;
+        }
+
+        if (datos.tipo_mensaje === "actualizacion_cuota") {
+            const optionElement = document.getElementById(`cuota-${datos.cuota_id}`);
+            if (optionElement) {
+                optionElement.textContent = `${datos.seleccion} - ${datos.nuevo_valor}`;
+                optionElement.style.color = "#2196f3";
+                setTimeout(() => {
+                    optionElement.style.color = "";
+                }, 2000);
+            }
+        }
+
+        if (datos.tipo_mensaje === "estado_mercado") {
+            const articulo = document.getElementById("evento-" + datos.evento_id);
+            if (articulo) {
+                const btnApuesta = articulo.querySelector("button[type='submit']");
+                const bannerEvento = articulo.querySelector(".banner-suspendido");
+
+                if (datos.estado === "suspendido") {
+                    if (btnApuesta) {
+                        btnApuesta.disabled = true;
+                        btnApuesta.innerText = "🔒 MERCADO SUSPENDIDO";
+                        btnApuesta.style.backgroundColor = "#555555";
+                        btnApuesta.style.cursor = "not-allowed";
+                    }
+                    if (bannerEvento) {
+                        bannerEvento.style.display = "block";
+                    }
+                } else if (datos.estado === "abierto") {
+                    if (btnApuesta) {
+                        btnApuesta.disabled = false;
+                        btnApuesta.innerText = "Confirmar apuesta";
+                        btnApuesta.style.backgroundColor = "";
+                        btnApuesta.style.cursor = "pointer";
+                    }
+                    if (bannerEvento) {
+                        bannerEvento.style.display = "none";
+                    }
+                }
+            }
+        }
+    };
+</script>
 {% endblock %}

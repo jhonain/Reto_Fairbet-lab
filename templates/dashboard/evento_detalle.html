@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Mercados del evento — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<p><a href="{% url 'dashboard-eventos' %}">&larr; Volver a eventos</a></p>
+
+<h1>{{ evento.equipo_local }} vs {{ evento.equipo_visitante }}</h1>
+<p>Inicio: {{ evento.inicia_en|date:"d/m/Y H:i" }} — Estado: {{ evento.get_estado_display }}</p>
+
+<section class="tarjeta">
+    <h2>Acciones del operador</h2>
+    <p>Lanza acciones sobre este evento sin entrar al panel de admin.</p>
+    <form method="post" onsubmit="return confirm('¿Seguro que deseas ejecutar esta acción?');">
+        {% csrf_token %}
+        {% include "dashboard/_acciones_evento.html" %}
+    </form>
+</section>
+
+{% if not mercados %}
+<section class="tarjeta">
+    <h2>Este evento no tiene mercados</h2>
+    <p>Genera los mercados básicos para que se pueda apostar en este evento.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="generar_mercados" />
+        <button type="submit" class="btn">Generar mercados (1X2, Over/Under, Ambos anotan)</button>
+    </form>
+</section>
+{% else %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="guardar_cuotas" />
+
+    {% for m_info in mercados %}
+    <section class="tarjeta">
+        <h2>{{ m_info.mercado.get_tipo_display|default:m_info.mercado.tipo }}</h2>
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>Selección</th>
+                    <th>Cuota (valor)</th>
+                    <th>Activa</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in m_info.cuotas %}
+                <tr>
+                    <td>{{ c.get_seleccion_display|default:c.seleccion }}</td>
+                    <td>
+                        <input type="number" step="0.0001" min="1.0001"
+                            name="valor_{{ c.id }}" value="{{ c.valor }}" style="width: 110px;" />
+                    </td>
+                    <td>
+                        <input type="checkbox" name="activa_{{ c.id }}" {% if c.activa %}checked{% endif %} />
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endfor %}
+
+    <button type="submit" class="btn">Guardar cuotas</button>
+</form>
+
+<section class="tarjeta">
+    <h3>¿Faltan mercados?</h3>
+    <p>Si quieres volver a generar los mercados básicos (no duplica los que ya existen):</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="generar_mercados" />
+        <button type="submit" class="btn btn-sec">Generar mercados faltantes</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

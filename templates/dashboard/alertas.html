@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Alertas anti-fraude — FairBet Lab{% endblock %}
+{% block content %}
+{% include "dashboard/_nav.html" %}
+
+<h1>Alertas anti-fraude</h1>
+
+<section class="tarjeta">
+    <h2>Múltiples cuentas por IP</h2>
+    <p style="font-size: 0.9rem; color: #555;">
+        Se genera una alerta cuando hay 3 o más cuentas registradas desde la misma IP.
+    </p>
+
+    {% if not alertas %}
+    <p>No hay alertas registradas.</p>
+    {% else %}
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Descripción</th>
+                <th>IP</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for al in alertas %}
+            <tr>
+                <td>{{ al.usuario.username|default:"—" }}</td>
+                <td>{{ al.descripcion }}</td>
+                <td>{{ al.ip_address|default:"—" }}</td>
+                <td>{{ al.get_estado_display }}</td>
+                <td>{{ al.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <form method="post" style="display:inline-block;"
+                        onsubmit="return confirm('¿Ejecutar esta acción sobre la alerta?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="alerta_id" value="{{ al.id }}" />
+                        <select name="accion" required style="min-width: 180px;">
+                            <option value="" disabled selected>Acción...</option>
+                            <option value="marcar_revisado">Marcar como revisada</option>
+                            <option value="marcar_descartado">Descartar alerta</option>
+                            <option value="marcar_pendiente">Volver a pendiente</option>
+                        </select>
+                        <button type="submit" class="btn">ACCIONES</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endblock %}

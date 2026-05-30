@@ -1,12 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-
 from apps.users.validators import validar_dni, validar_edad
 
-
 Usuario = get_user_model()
-
 
 class RegistroUsuarioSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
@@ -16,7 +13,7 @@ class RegistroUsuarioSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         if Usuario.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Usuario ya existe.")
+            raise serializers.ValidationError('Usuario ya existe.')
         return value
 
     def validate_dni(self, value):

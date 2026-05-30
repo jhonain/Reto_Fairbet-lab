@@ -13,9 +13,13 @@
         <nav>
             {% if user.is_authenticated %}
                 <a href="{% url 'portal-eventos' %}">Eventos</a>
+                <a href="{% url 'portal-combinada' %}">Combinada</a>
                 <a href="{% url 'portal-wallet' %}">Billetera</a>
                 <a href="{% url 'portal-apuestas' %}">Mis apuestas</a>
                 <a href="{% url 'portal-responsable' %}">Juego responsable</a>
+                {% if user.is_staff %}
+                <a href="{% url 'dashboard-panel' %}">Operador</a>
+                {% endif %}
                 <a href="{% url 'portal-perfil' %}">{{ user.username }}</a>
                 <a href="{% url 'portal-logout' %}">Salir</a>
             {% else %}
@@ -39,5 +43,6 @@
     <footer class="pie">
         <p class="aviso-legal"><strong>{{ aviso_legal }}</strong></p>
     </footer>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
